@@ -16,8 +16,13 @@
  */
 package main
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/jpxor/fireside/internal/app/fireside"
+)
 
 func main() {
-	fmt.Println("Hello Fireside")
+	fmt.Println("Welcome to Fireside!")
+	fireside.Run()
 }
