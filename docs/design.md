@@ -114,4 +114,21 @@ Investment returns can be determined by taking the change in value less the amou
 
 Describes the technical features 
 
+1. profile selection
+2. profile creation
+3. add transaction
+4. edit transaction
+5. create asset account
+6. update asset account
+7. 
+
+Data Files:
+    All data will be saved in plain-text files for portability and compatibility with file sharing services.
+
+Shared Expenses:
+    Expenses are split up into groups, and each expense group is composed of 1 Read-Write file for Owned expenses and 0 or more Read-Only files for Shared expenses. These Shared expense files will be shared and sync'ed via file sharing service chosen and setup by user.
+    
+    Each loaded transaction needs an associated userID
+    Each shared transaction needs a way to assign shared fractions to userIDs
+
 ## User Interface

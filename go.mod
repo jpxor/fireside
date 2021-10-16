@@ -6,8 +6,10 @@ require (
 	github.com/andybalholm/brotli v1.0.2 // indirect
 	github.com/davecgh/go-spew v1.1.0 // indirect
 	github.com/gofiber/fiber/v2 v2.19.0 // indirect
+	github.com/gofiber/utils v0.1.2 // indirect
 	github.com/klauspost/compress v1.13.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rs/xid v1.3.0 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
