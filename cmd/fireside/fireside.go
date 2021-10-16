@@ -19,10 +19,37 @@ package main
 import (
 	"fmt"
 
-	"github.com/jpxor/fireside/internal/app/fireside"
+	"github.com/jpxor/fireside/internal/app/fireside/server"
+	"github.com/jpxor/fireside/internal/app/fireside/user"
+	"github.com/skratchdot/open-golang/open"
 )
 
+type App struct {
+	Users   user.Service
+	Backend server.Service
+}
+
+var Fireside App
+
 func main() {
-	fmt.Println("Welcome to Fireside!")
-	fireside.Run()
+
+	fmt.Println("reading configs...")
+	// TODO
+
+	fmt.Println("initializing...")
+	Fireside.Users = user.NewService("./users.json")
+	Fireside.Backend = server.NewService(Fireside.Users)
+
+	fmt.Println("starting local private app server...")
+	sigexit, port := Fireside.Backend.Start()
+
+	fmt.Println("launching browser UI...")
+	open.Run(fmt.Sprintf("http://localhost:%d/welcome", port))
+
+	fmt.Println("waiting for app server to shutdown...")
+	if sigexit != nil {
+		<-sigexit
+		close(sigexit)
+	}
+	fmt.Println("Bye!")
 }
