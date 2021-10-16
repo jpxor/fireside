@@ -28,7 +28,7 @@ import (
 
 type Props map[string]string
 
-type DocStore struct {
+type DB struct {
 	FilePath  string
 	Documents map[string]Props
 	mutex     sync.RWMutex
@@ -38,8 +38,8 @@ var ErrForEachStop = errors.New(("ForEachStop"))
 
 // Open creates docstore instance and attempts to load
 // data from file if it exists
-func Open(filepath string) (DocStore, error) {
-	var docstore DocStore
+func Open(filepath string) (DB, error) {
+	var docstore DB
 	if _, err := os.Stat(filepath); err != nil {
 		docstore.FilePath = filepath
 		docstore.Documents = make(map[string]Props)
@@ -48,14 +48,14 @@ func Open(filepath string) (DocStore, error) {
 	}
 	data, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return DocStore{}, err
+		return DB{}, err
 	}
 	err = json.Unmarshal([]byte(data), &docstore)
 	return docstore, err
 }
 
 // Save will sync docstore with its file
-func (ds DocStore) Save() error {
+func (ds DB) Save() error {
 	ds.mutex.RLock()
 	defer ds.mutex.RUnlock()
 
@@ -67,7 +67,7 @@ func (ds DocStore) Save() error {
 }
 
 // ForEach document in the store executes the callback
-func (ds DocStore) ForEach(callback func(id string, props Props) error) error {
+func (ds DB) ForEach(callback func(id string, props Props) error) error {
 	ds.mutex.RLock()
 	defer ds.mutex.RUnlock()
 
@@ -82,7 +82,7 @@ func (ds DocStore) ForEach(callback func(id string, props Props) error) error {
 
 // Insert adds the properties document to docstore and
 // returns the id of the newly inserted props
-func (ds DocStore) Insert(props Props) string {
+func (ds DB) Insert(props Props) string {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
@@ -92,7 +92,7 @@ func (ds DocStore) Insert(props Props) string {
 }
 
 // Get document by id
-func (ds DocStore) Get(id string) Props {
+func (ds DB) Get(id string) Props {
 	ds.mutex.RLock()
 	defer ds.mutex.RUnlock()
 	return ds.Documents[id]

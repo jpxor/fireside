@@ -18,6 +18,7 @@ package docstore
 
 import (
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"os"
 	"testing"
 )
@@ -57,15 +58,22 @@ func TestDocStore(t *testing.T) {
 		require.NoError(t, err)
 
 		count := 0
-		ds.ForEach(func(id string, props Props) {
+		ds.ForEach(func(id string, props Props) error {
 			require.Equal(t, id, saved_id)
 			require.Equal(t, props["test"], "value")
 			count++
+			return nil
 		})
 		require.Equal(t, count, 1)
 
 		props := ds.Get(saved_id)
 		require.NotNil(t, props)
 		require.Equal(t, props["test"], "value")
+	}
+	{
+		// write garbage to file and  try loading again
+		ioutil.WriteFile(testpath, []byte("garbage"), 0644)
+		_, err := Open(testpath)
+		require.NotNil(t, err)
 	}
 }
