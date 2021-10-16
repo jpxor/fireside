@@ -1,4 +1,2 @@
 # Docstore
-Super simple document store persisted to a file on each write.
-
-Document is simply a map[string]string and each is given an ID on insert.
+Super simple document store persisted to a file on save. Documents are simply a map[string]string and each is given a string uuid ID on insert.
