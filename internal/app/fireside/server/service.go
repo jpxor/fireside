@@ -23,6 +23,7 @@ import (
 
 	fiber "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/utils"
+	"github.com/jpxor/fireside/internal/app/fireside/auth"
 	"github.com/jpxor/fireside/internal/app/fireside/user"
 )
 
@@ -32,13 +33,15 @@ type serverImpl struct {
 	fiber  *fiber.App
 	expire time.Time
 	Users  user.Service
+	Auth   auth.Service
 }
 
-func NewService(Users user.Service) Service {
+func NewService(Users user.Service, Auth auth.Service) Service {
 	serv := &serverImpl{
 		expire: time.Now().Add(12 * time.Second),
 		fiber:  fiber.New(),
 		Users:  Users,
+		Auth:   Auth,
 	}
 	serv.initHandlers()
 	go serv.startWatchdog()
@@ -130,7 +133,11 @@ func (s *serverImpl) handleKeepAlive() (string, string, fiberHandler) {
 func (s *serverImpl) handlePostUser() (string, string, fiberHandler) {
 	return "POST", "/users/:name",
 		func(c *fiber.Ctx) error {
-			err := s.Users.New(utils.ImmutableString(c.Params("name")))
+			hash, err := s.Auth.Hash("")
+			if err != nil {
+				return c.Status(500).SendString(err.Error())
+			}
+			err = s.Users.New(utils.ImmutableString(c.Params("name")), hash)
 			if err != nil {
 				return c.Status(409).SendString(err.Error())
 			}
@@ -161,12 +168,15 @@ func (s *serverImpl) handleGetUsers() (string, string, fiberHandler) {
 func (s *serverImpl) handleLogin() (string, string, fiberHandler) {
 	return "GET", "/auth/:id",
 		func(c *fiber.Ctx) error {
+			token, err := s.Auth.Authenticate(c.Params("id"), "")
+			if err != nil {
+				return c.Status(401).SendString("wrong user id or password")
+			}
 			type response struct {
 				Token string `json:"token"`
 			}
-			// user, err := GetUser(c.Params("id"))
 			return c.JSON(response{
-				"test-string-89nuwp38mctjwprgjmvperigmjcf",
+				token,
 			})
 		}
 }

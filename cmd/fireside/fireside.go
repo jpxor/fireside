@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/jpxor/fireside/internal/app/fireside/auth"
 	"github.com/jpxor/fireside/internal/app/fireside/server"
 	"github.com/jpxor/fireside/internal/app/fireside/user"
 	"github.com/skratchdot/open-golang/open"
@@ -27,6 +28,7 @@ import (
 type App struct {
 	Users   user.Service
 	Backend server.Service
+	Auth    auth.Service
 }
 
 var Fireside App
@@ -38,7 +40,8 @@ func main() {
 
 	fmt.Println("initializing...")
 	Fireside.Users = user.NewService("./users.json")
-	Fireside.Backend = server.NewService(Fireside.Users)
+	Fireside.Auth = auth.New(Fireside.Users)
+	Fireside.Backend = server.NewService(Fireside.Users, Fireside.Auth)
 
 	fmt.Println("starting local private app server...")
 	sigexit, port := Fireside.Backend.Start()

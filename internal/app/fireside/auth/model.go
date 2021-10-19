@@ -14,21 +14,18 @@
  *  You should have received a copy of the GNU General Public License
  *  along with fireside. If not, see <https://www.gnu.org/licenses/>.
  */
-package user
+package auth
 
-type Model struct {
-	Name string
-	ID   string
-	Hash string
+import "github.com/golang-jwt/jwt"
+
+type Claims struct {
+	UserID string
+	jwt.StandardClaims
 }
 
-// ForEachCallback exits early on error
-type ForEachCallback func(*Model) error
-
 type Service interface {
-	New(name, hash string) error
-	Delete(id string) error
-	Get(id string) (*Model, error)
-	Update(id string, new *Model) error
-	ForEach(cb ForEachCallback) error
+	Authenticate(uid, password string) (token string, err error)
+	Authorize(token, resource string) (success bool)
+	Refresh(token string) (newToken string, err error)
+	Hash(plain string) (hash string, err error)
 }

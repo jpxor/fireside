@@ -38,7 +38,7 @@ func NewService(filepath string) Service {
 }
 
 // New creates a new user by name
-func (us *serviceImpl) New(name string) error {
+func (us *serviceImpl) New(name, hash string) error {
 	// check if username already in use!
 	rc := us.DB.ForEach(func(id string, props docstore.Props) error {
 		if props["name"] == name {
@@ -52,6 +52,7 @@ func (us *serviceImpl) New(name string) error {
 	// add new user
 	us.DB.Insert(docstore.Props{
 		"name": name,
+		"hash": hash,
 	})
 	rc = us.DB.Save()
 	if rc != nil {
@@ -66,6 +67,7 @@ func (us *serviceImpl) ForEach(callback ForEachCallback) error {
 		return callback(&Model{
 			ID:   id,
 			Name: props["name"],
+			Hash: props["hash"],
 		})
 	}
 	return us.DB.ForEach(userCallback)
@@ -78,7 +80,13 @@ func (us *serviceImpl) Delete(id string) error {
 
 // Get
 func (us *serviceImpl) Get(id string) (*Model, error) {
-	return nil, errors.New("not implemented")
+	props := us.DB.Get(id)
+	user := &Model{
+		ID:   id,
+		Name: props["name"],
+		Hash: props["hash"],
+	}
+	return user, nil
 }
 
 // Update
