@@ -1,0 +1,14 @@
+
+; with descriptions, comments, multiple transactions,
+;      whitespace, and inferred amount
+
+2023/11/20 This is the tx description ; comment
+    assets:cash        $420  ; a comment
+    income:employer  - $420
+
+; a comment
+2023/11/21 This is the tx description
+    income:employer  - $420
+    ; a comment
+    assets:cash
+    

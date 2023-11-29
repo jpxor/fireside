@@ -1,0 +1,22 @@
+
+bad format line
+
+2023/21/20 ; bad date
+
+2023/11/20
+assets:cash $420  ; missing indent
+
+2023/11/20
+    assets:cash $420
+assets:cash -$420  ; missing indent
+
+2023/11/20
+    1two   ; account name can start with number?
+
+2023/11/20
+    acct name with spaces ; ok!
+    acct name $45         ; needs more white space
+                          ; between name and amount
+
+2023/11/20
+    acct  420 GG @ 69$ wowza but no more
