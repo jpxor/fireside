@@ -166,12 +166,8 @@ func BenchmarkTrimSpace(b *testing.B) {
 	}
 }
 
+// 76863 ns/op	    5648 B/op	      21 allocs/op
 func BenchmarkParser(b *testing.B) {
-
-	// 14917465 ns/op	 5164081 B/op	   55019 allocs/op
-	// file := "./test/bench1.journal"
-
-	// 83309 ns/op	    9648 B/op	      21 allocs/op
 	file := "./test/bench2.journal"
 	for i := 0; i < b.N; i++ {
 		_, _, _ = ParseJournal(file)

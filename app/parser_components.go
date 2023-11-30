@@ -31,11 +31,12 @@ func (s *Scanner) Scan() bool {
 	return s.Scanner.Scan()
 }
 
-// this has been tricky to call correctly and when needed...
-// TODO: refactor this to do the line split (ie: head/tail split)
-// so that col state doesn't get out of sync
-func (s *Scanner) advance(i int) {
-	s.col += i
+// the caller must guarantee advancing is valid
+func (s *Scanner) advance(line []byte, i int) (tok, tail []byte) {
+	tok = line[:i]
+	tail = bytes.TrimSpace(line[i:])
+	s.col += len(line) - len(tail)
+	return
 }
 
 func (s *Scanner) wrap(err error) error {
@@ -96,7 +97,7 @@ func (s *Scanner) ParseDate(tok []byte) (out time.Time, tail []byte, err error) 
 	}
 	if len(tok) > 10 { // must be followed by space, tab, or newline
 		if !unicode.IsSpace(rune(tok[10])) {
-			s.advance(10)
+			s.advance(tok, 10)
 			return NotDate, []byte{}, s.wrap(fmt.Errorf("date must be followed by space or newline"))
 		}
 	}
@@ -106,8 +107,7 @@ func (s *Scanner) ParseDate(tok []byte) (out time.Time, tail []byte, err error) 
 	if err != nil {
 		return NotDate, []byte{}, s.wrap(err)
 	}
-	tail = bytes.TrimSpace(tok[10:])
-	s.advance(len(tok) - len(tail))
+	_, tail = s.advance(tok, 10)
 	return
 }
 
@@ -117,13 +117,12 @@ func (s *Scanner) ParseTxPending(tok []byte) (out bool, tail []byte, err error) 
 		if len(tok) > 1 {
 			// must be followed by space, tab, or newline
 			if !unicode.IsSpace(rune(tok[1])) {
-				s.advance(1)
+				s.advance(tok, 1)
 				return false, []byte{}, s.wrap(fmt.Errorf("'!' must be followed by space or newline"))
 			}
 		}
 		out = true
-		tail = bytes.TrimSpace(tok[1:])
-		s.advance(len(tok) - len(tail))
+		_, tail = s.advance(tok, 1)
 		return
 	}
 	return false, tok, nil
@@ -139,13 +138,12 @@ func (s *Scanner) ParseTxCode(tok []byte) (out string, tail []byte, err error) {
 		if len(tok) > lbi+1 {
 			// must be followed by space, tab, or newline
 			if !unicode.IsSpace(rune(tok[lbi+1])) {
-				s.advance(lbi)
+				s.advance(tok, lbi)
 				return "", []byte{}, s.wrap(fmt.Errorf("'(code)' must be followed by space or newline"))
 			}
 		}
 		out = string(tok[1:lbi])
-		tail = bytes.TrimSpace(tok[lbi+1:])
-		s.advance(len(tok) - len(tail))
+		_, tail = s.advance(tok, len(out)+2)
 		return
 	}
 	return "", tok, nil
@@ -181,7 +179,7 @@ func (s *Scanner) ParseTxDesc(tok []byte) (out string, tags []string, err error)
 func (s *Scanner) ParseIndent(tok []byte) (tail []byte, err error) {
 	if (len(tok) > 0) &&
 		unicode.IsSpace(rune(tok[0])) {
-		tail = bytes.TrimSpace(tok)
+		_, tail = s.advance(tok, 1)
 		return
 	}
 	tail = tok
@@ -206,10 +204,8 @@ func (s *Scanner) ParseAcctName(tok []byte) (out string, tail []byte, err error)
 	}
 
 	i := endOfNameIndex(tok)
-	out = string(tok[:i])
-
-	tail = bytes.TrimSpace(tok[i:])
-	s.advance(len(tok) - len(tail))
+	tok, tail = s.advance(tok, i)
+	out = string(tok)
 	return
 }
 
@@ -218,8 +214,7 @@ func (s *Scanner) ParseAcctName(tok []byte) (out string, tail []byte, err error)
 func (s *Scanner) ParsePostNeg(tok []byte) (out bool, tail []byte, err error) {
 	if len(tok) > 0 && tok[0] == '-' {
 		out = true
-		tail = bytes.TrimSpace(tok[1:])
-		s.advance(len(tok) - len(tail))
+		_, tail = s.advance(tok, 1)
 		return
 	}
 	return false, tok, nil
@@ -234,15 +229,11 @@ func (s *Scanner) ParsePostPrefix(tok []byte) (out string, tail []byte, err erro
 	for i = 0; i < len(tok); i += w {
 		r, w = utf8.DecodeRune(tok[i:])
 		if unicode.IsSpace(r) || unicode.IsDigit(r) {
-			out = string(tok[:i])
-			tail = bytes.TrimSpace(tok[i:])
 			break
 		}
 	}
-	if i == len(tok) {
-		out = string(tok)
-	}
-	s.advance(len(tok) - len(tail))
+	tok, tail = s.advance(tok, i)
+	out = string(tok)
 	return
 }
 
@@ -253,8 +244,7 @@ func (s *Scanner) ParseDecimal(tok []byte) (out decimal.Decimal, decsym string, 
 		err = s.wrap(fmt.Errorf("failed for parse decimal: '%s'", tok))
 		return
 	}
-	tail = bytes.TrimSpace(tok[r+1:])
-	tok = tok[:r+1]
+	tok, tail = s.advance(tok, r+1)
 
 	// number of digits to the right of decimal separator
 	nfractional := 0
@@ -286,7 +276,6 @@ func (s *Scanner) ParseDecimal(tok []byte) (out decimal.Decimal, decsym string, 
 	}
 
 	out = fastNewDecimal(tok, nfractional)
-	s.advance(len(tok) - len(tail))
 	return
 }
 
@@ -350,8 +339,7 @@ func (s *Scanner) ParsePostfix(tok []byte) (sym string, code string, tail []byte
 
 	r := bytes.IndexByte(tok, '@')
 	if r != -1 {
-		tail = bytes.TrimSpace(tok[r:])
-		tok = tok[:r]
+		tok, tail = s.advance(tok, r)
 	}
 
 	if isQuotedStr(tok) {
@@ -374,7 +362,6 @@ func (s *Scanner) ParsePostfix(tok []byte) (sym string, code string, tail []byte
 			code = string(right)
 		}
 	}
-	s.advance(len(tok) - len(tail))
 	return
 }
 
@@ -402,8 +389,7 @@ func (s *Scanner) ParsePrice(tok []byte) (value decimal.Decimal, comType Commodi
 		err = s.wrap(fmt.Errorf("unknown format, cant parse: '%s'", tok))
 		return
 	}
-	tok = bytes.TrimSpace(tok[1:])
-	s.advance(1)
+	_, tok = s.advance(tok, 1)
 
 	if len(tok) == 0 {
 		err = s.wrap(fmt.Errorf("missing unit value"))
@@ -411,9 +397,8 @@ func (s *Scanner) ParsePrice(tok []byte) (value decimal.Decimal, comType Commodi
 	}
 	// @@ means total value
 	if tok[0] == '@' {
-		tok = bytes.TrimSpace(tok[1:])
+		_, tok = s.advance(tok, 1)
 		perUnit = false
-		s.advance(1)
 	} else {
 		perUnit = true
 	}

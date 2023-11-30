@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -700,6 +701,115 @@ func TestFastNewDecimal(t *testing.T) {
 			fmt.Printf("got valu: '%s'\n", dec)
 			fmt.Printf("expected: '%s'\n", expected)
 		}
+	}
+}
+
+func TestScannerAdvance(t *testing.T) {
+	s := Scanner{
+		filename: "TestScannerAdvance",
+	}
+
+	line := "2023/11/30 ! (code) description"
+	fmt.Println(line)
+
+	startlen := len(line)
+	col := 0
+
+	_, tail, _ := s.ParseDate([]byte(line))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, tail, _ = s.ParseTxPending(tail)
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", s.col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", s.col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, tail, _ = s.ParseTxCode(tail)
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", s.col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", s.col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	// new line
+	s.col = 0
+
+	line = "    acctName  - pre 40.00 POST @$1"
+	startlen = len(line)
+	fmt.Println(line)
+
+	tail, _ = s.ParseIndent([]byte(line))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, tail, _ = s.ParseAcctName([]byte(tail))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, tail, _ = s.ParsePostNeg([]byte(tail))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, tail, _ = s.ParsePostPrefix([]byte(tail))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, _, tail, _ = s.ParseDecimal([]byte(tail))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Error("scanner column mismatch")
+	}
+
+	_, _, tail = s.ParsePostfix([]byte(tail))
+	col = startlen - len(tail)
+
+	fmt.Printf("%s%s\r\n", strings.Repeat(" ", col), tail)
+	fmt.Printf("%s^\r\n", strings.Repeat(" ", col))
+
+	if col != s.col {
+		t.Errorf("scanner column mismatch: have %d, expected %d", s.col, col)
 	}
 }
 
