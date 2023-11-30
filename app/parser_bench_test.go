@@ -90,7 +90,7 @@ func BenchmarkParsePostPrefix(b *testing.B) {
 	}
 }
 
-// 221.9 ns/op	      40 B/op	       2 allocs/op
+// 196.6 ns/op	      40 B/op	       2 allocs/op
 func BenchmarkParseDecimal(b *testing.B) {
 	s := Scanner{
 		filename: "BenchmarkParsePostPrefix",
@@ -123,12 +123,12 @@ func BenchmarkParsePrice(b *testing.B) {
 	}
 }
 
-// 103.0 ns/op	      40 B/op	       2 allocs/op
+// 96.52 ns/op	      40 B/op	       2 allocs/op
 func BenchmarkFastDecimal(b *testing.B) {
-	upper := []byte("123")
-	lower := []byte("32")
+	tok := []byte("123.32")
+	nfractional := 2
 	for i := 0; i < b.N; i++ {
-		fastNewFromString(upper, lower)
+		fastNewDecimal(tok, nfractional)
 	}
 }
 

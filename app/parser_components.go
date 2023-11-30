@@ -57,30 +57,25 @@ func tidy(line []byte) (retLine []byte, empty, hadComment bool) {
 }
 
 // Note: the decimal.NewFromString function was slow and required
-// an alloc to convert bytes to a string. Here we calculate the value
-// and exponential components of the decimal ourselves without
-// a string conversion. Benchmarks show we tripled the speed and
-// halved the number of allocations
-func fastNewFromString(upper, lower []byte) decimal.Decimal {
-	toVal := func(upper, lower []byte) (value int64) {
-		// assumes any non-digit chars are thousandths separators
-		// and can be skipped without effecting result
-		for i := 0; i < len(upper); i++ {
-			if unicode.IsDigit(rune(upper[i])) {
-				value = 10*value + int64(upper[i]-'0')
+// an alloc to convert bytes to a string. Here we calculate the
+// significand and exponential components of the decimal ourselves
+// without a string conversion. Benchmarks show we tripled the
+// speed and halved the number of allocations
+func fastNewDecimal(tok []byte, nfractional int) decimal.Decimal {
+	parseSignificand := func(tok []byte) (value int64) {
+		// non-digit characters can be found in the token, these
+		// are the thousandths and decimal separators which must
+		// be skipped when computing the significand
+		for i := 0; i < len(tok); i++ {
+			if unicode.IsDigit(rune(tok[i])) {
+				value = 10*value + int64(tok[i]-'0')
 			}
-		}
-		// assumes no non-digits are part of the lower slice.
-		// note: lower is everything to the right of the decimal
-		// separator
-		for i := 0; i < len(lower); i++ {
-			value = 10*value + int64(lower[i]-'0')
 		}
 		return value
 	}
-	value := toVal(upper, lower)
-	exp := int32(-len(lower))
-	return decimal.New(value, exp)
+	significand := parseSignificand(tok)
+	exp := int32(-nfractional)
+	return decimal.New(significand, exp)
 }
 
 func matchDate(tok []byte) bool {
@@ -261,46 +256,36 @@ func (s *Scanner) ParseDecimal(tok []byte) (out decimal.Decimal, decsym string, 
 	tail = bytes.TrimSpace(tok[r+1:])
 	tok = tok[:r+1]
 
+	// number of digits to the right of decimal separator
+	nfractional := 0
+
+	// potential index of the separator
 	r = bytes.LastIndexFunc(tok, func(r rune) bool {
 		return !unicode.IsDigit(r)
 	})
 
-	if r == -1 { // no non-digits
-		out = fastNewFromString(tok, nil)
-		s.advance(len(tok) - len(tail))
-		return
-	}
+	if r != -1 {
+		// assume there are only 1 or 2 digits to the right of the decimal sep (.00)
+		// therefore, any more and we assume its a thousandths sep and can ignore it
+		if len(tok)-r <= 3 {
+			nfractional = len(tok) - r - 1
 
-	// TODO: no need to split, just need separator position
-	var upper []byte = tok
-	var lower []byte
-
-	// must parse decimal separator from 'other' separators (thousandths or otherwise)
-	// assume there are only 1 or 2 digits to the right of the decimal sep (.00)
-	if len(tok)-r <= 3 {
-
-		if unicode.IsPunct(rune(tok[r])) {
-			upper = tok[:r]
-			lower = tok[r+1:]
-
-		} else {
 			// decimal separator may be a currency symbol !
-			// symbol may span more than one byte
-			l := 1 + bytes.LastIndexFunc(tok[:r], unicode.IsDigit)
+			// and a symbol may span more than one byte
+			if !unicode.IsPunct(rune(tok[r])) {
+				l := 1 + bytes.LastIndexFunc(tok[:r], unicode.IsDigit)
 
-			// but it cant be empty
-			if len(bytes.TrimSpace(tok[l:r+1])) == 0 {
-				err = s.wrap(fmt.Errorf("bad format: space in value '%s'", tok))
-				return
+				// but it cant be empty
+				if len(bytes.TrimSpace(tok[l:r+1])) == 0 {
+					err = s.wrap(fmt.Errorf("bad format: space in value '%s'", tok))
+					return
+				}
+				decsym = string(tok[l : r+1])
 			}
-
-			decsym = string(tok[l : r+1])
-			upper = tok[:l]
-			lower = tok[r+1:]
 		}
 	}
 
-	out = fastNewFromString(upper, lower)
+	out = fastNewDecimal(tok, nfractional)
 	s.advance(len(tok) - len(tail))
 	return
 }

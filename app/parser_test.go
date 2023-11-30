@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -661,25 +662,44 @@ func TestParsePrice(t *testing.T) {
 	}
 }
 
-func TestFastDecimalFromString(t *testing.T) {
-	upper := []byte("123")
-	lower := []byte("321")
-	dec := fastNewFromString(upper, lower)
+func TestFastNewDecimal(t *testing.T) {
 
-	if dec.String() != "123.321" {
-		t.Error("falied")
-		fmt.Printf("in : [%s]:[%s]\r\n", upper, lower)
-		fmt.Printf("out: %s\r\n", dec.String())
+	type Case struct {
+		token       string
+		nfractional int
 	}
 
-	upper = []byte("21")
-	lower = []byte("12")
-	dec = fastNewFromString(upper, lower)
+	// decimal.NewFromString doesn't accept
+	// any symbols outside of digits and
+	// the decimal point
+	filter := regexp.MustCompile("[^0-9.]")
 
-	if dec.String() != "21.12" {
-		t.Error("falied")
-		fmt.Printf("in : [%s]:[%s]\r\n", upper, lower)
-		fmt.Printf("out: %s\r\n", dec.String())
+	cases := []Case{
+		{"123", 0},
+		{"123.4", 1},
+		{"123.45", 2},
+		{"123.456", 3},
+		{"1,234", 0},
+		{"1,234.5", 1},
+		{"1,234.56", 2},
+		{"1,234.567", 3},
+		{"1,234,567", 0},
+	}
+
+	for i, test := range cases {
+		expected, err := decimal.NewFromFormattedString(test.token, filter)
+		dec := fastNewDecimal([]byte(test.token), test.nfractional)
+
+		if err != nil {
+			t.Errorf("failed to get expected value (#%d)", i)
+		}
+
+		if !expected.Equal(dec) {
+			t.Errorf("values do not match (#%d)", i)
+			fmt.Printf("in      : %s\n", test.token)
+			fmt.Printf("got valu: '%s'\n", dec)
+			fmt.Printf("expected: '%s'\n", expected)
+		}
 	}
 }
 
