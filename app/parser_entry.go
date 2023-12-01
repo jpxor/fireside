@@ -205,7 +205,7 @@ func balanceTransaction(tx *Transaction) error {
 
 	// 1. sum all amounts per commodity type
 	// 2. identify posting with missing amount
-	balances := make(map[Commodity]decimal.Decimal)
+	balances := make(map[CommodityType]decimal.Decimal)
 	var inferredPost *Posting = nil
 
 	missingCount := 0
@@ -216,7 +216,7 @@ func balanceTransaction(tx *Transaction) error {
 			missingCount++
 			inferredPost = post
 		} else {
-			balances[post.Commodity] = balances[post.Commodity].Add(post.Amount)
+			balances[post.Commodity.Type] = balances[post.Commodity.Type].Add(post.Amount)
 		}
 	}
 
@@ -230,7 +230,7 @@ func balanceTransaction(tx *Transaction) error {
 	for com, balance := range balances {
 		if !balance.Equal(decimal.Zero) {
 			if missingCount > 0 {
-				inferredPost.Commodity = com
+				inferredPost.Commodity.Type = com
 				inferredPost.Amount = balance.Neg()
 				missingCount--
 			} else {
