@@ -132,19 +132,21 @@ func BenchmarkFastDecimal(b *testing.B) {
 	}
 }
 
-// 568.7 ns/op	     368 B/op	       3 allocs/op
+// 2087 ns/op	    4224 B/op	       2 allocs/op
 func BenchmarkParseTransaction(b *testing.B) {
-	buf := bytes.NewBufferString("2023/11/20 ! (code) description")
+	buf := bytes.NewBufferString(
+		`2023/11/20 ! (code) description
+			account1       $420
+			account2     - $420
 
-	s := Scanner{
-		filename: "BenchmarkParseTransaction",
-		Scanner:  bufio.NewScanner(buf),
-	}
-
-	s.Scan()
-	line := s.Bytes()
-
+`)
 	for i := 0; i < b.N; i++ {
+		s := Scanner{
+			filename: "BenchmarkParseTransaction",
+			Scanner:  bufio.NewScanner(buf),
+		}
+		s.Scan()
+		line := s.Bytes()
 		s.ParseTransaction(line)
 	}
 
@@ -166,7 +168,31 @@ func BenchmarkTrimSpace(b *testing.B) {
 	}
 }
 
-// 76863 ns/op	    5648 B/op	      21 allocs/op
+// 1984 ns/op	     376 B/op	      12 allocs/op
+func BenchmarkBalanceTransaction(b *testing.B) {
+	buf := bytes.NewBufferString(
+		`2023/11/20 This is the tx description
+			assets:cash        $420
+			income:employer  - $420
+
+`)
+	s := Scanner{
+		Scanner: bufio.NewScanner(buf),
+	}
+	s.Scan()
+	line := s.Bytes()
+	tx, _, err := s.ParseTransaction(line)
+
+	if err != nil {
+		b.Error("failed to parse the transaction")
+	}
+
+	for i := 0; i < b.N; i++ {
+		balanceTransaction(&tx)
+	}
+}
+
+// 90077 ns/op	    6400 B/op	      42 allocs/op
 func BenchmarkParser(b *testing.B) {
 	file := "./test/bench2.journal"
 	for i := 0; i < b.N; i++ {

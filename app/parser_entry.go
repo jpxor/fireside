@@ -90,6 +90,13 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 		errs.add(err)
 	}
 
+	for i := 0; i < len(transactions); i++ {
+		err := balanceTransaction(&transactions[i])
+		if err != nil {
+			errs.add(err)
+		}
+	}
+
 	return journal, transactions, errs.get()
 }
 
@@ -167,6 +174,10 @@ func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, ok bool, err er
 			post.Commodity.BookValue, post.Commodity.ValueType, perUnit,
 				tail, err = s.ParsePrice(tail)
 
+			if err != nil {
+				return
+			}
+
 			if !perUnit && !(post.Commodity.BookValue == decimal.Zero) {
 				post.Commodity.BookValue = post.Commodity.BookValue.Div(post.Amount)
 			}
@@ -179,9 +190,57 @@ func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, ok bool, err er
 		tx.Postings = append(tx.Postings, post)
 	}
 
-	// TODO: validate transaction
 	ok = true
 	return
+}
+
+// the file format allows omitting a single posting amount.
+// this amount needs to be inferred. Omitted amounts will
+// appear as decimal.Zero
+//
+// TODO:
+// need to deal with cases where commodity types may not
+// match, ie. when purchasing stocks
+func balanceTransaction(tx *Transaction) error {
+
+	// 1. sum all amounts per commodity type
+	// 2. identify posting with missing amount
+	balances := make(map[Commodity]decimal.Decimal)
+	var inferredPost *Posting = nil
+
+	missingCount := 0
+	for i := 0; i < len(tx.Postings); i++ {
+		post := &tx.Postings[i]
+
+		if post.Amount.Equal(decimal.Zero) {
+			missingCount++
+			inferredPost = post
+		} else {
+			balances[post.Commodity] = balances[post.Commodity].Add(post.Amount)
+		}
+	}
+
+	if missingCount > 1 {
+		// TODO: I need to add file details: filename + row (+col)?
+		return fmt.Errorf("missing posting amount, cannot infer more than one")
+	}
+
+	// 3. check balances (should all equal zero)
+	// 4. infer the one missing amount if needed
+	for com, balance := range balances {
+		if !balance.Equal(decimal.Zero) {
+			if missingCount > 0 {
+				inferredPost.Commodity = com
+				inferredPost.Amount = balance.Neg()
+				missingCount--
+			} else {
+				// TODO: I need to add file details: filename + row (+col)?
+				return fmt.Errorf("transaction is not balanced")
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Scanner) ParseDirective(j *Journal, line []byte) (txs []Transaction, ok bool, err error) {

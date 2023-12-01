@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"reflect"
 	"regexp"
+	"sort"
+	"strings"
 	"testing"
 	"time"
 
@@ -716,13 +718,77 @@ func TestErrJournal(t *testing.T) {
 
 func TestSanity(t *testing.T) {
 	file := "./test/test.journal"
-	_, tx, err := ParseJournal(file)
+	_, txs, err := ParseJournal(file)
 
 	if err != nil {
 		t.Errorf(err.Error())
 		return
 	}
 
-	//TODO: check transaction parse results!
-	fmt.Println(tx)
+	date := func(str string) (d time.Time) {
+		d, _ = time.Parse("2006/01/02", str)
+		return
+	}
+
+	// there are 2 transaction in the file, but they should
+	// both produce the same tx struct:
+	expectedTx := Transaction{
+		Date:        date("2023/11/20"),
+		Description: "This is the tx description",
+		Postings: []Posting{
+			{
+				Account: "assets:cash",
+				Amount:  fastNewDecimal([]byte("420"), 0),
+			}, {
+				Account: "income:employer",
+				Amount:  fastNewDecimal([]byte("420"), 0).Neg(),
+			},
+		},
+	}
+
+	// postings must be sorted, so order does not affect the
+	// results
+	sort.Slice(expectedTx.Postings, func(i, j int) bool {
+		si := expectedTx.Postings[i].Account
+		sj := expectedTx.Postings[j].Account
+		return strings.Compare(si, sj) < 0
+	})
+
+	for _, tx := range txs {
+
+		sort.Slice(tx.Postings, func(i, j int) bool {
+			si := tx.Postings[i].Account
+			sj := tx.Postings[j].Account
+			return strings.Compare(si, sj) < 0
+		})
+
+		// allow to check visually
+		fmt.Println(tx)
+
+		if !expectedTx.Date.Equal(tx.Date) {
+			t.Error("dates don't match")
+		}
+
+		if expectedTx.Description != tx.Description {
+			t.Error("descriptions don't match")
+		}
+
+		if len(expectedTx.Postings) != len(tx.Postings) {
+			t.Error("len postins don't match")
+		}
+
+		for i := 0; i < len(tx.Postings); i++ {
+			post := tx.Postings[i]
+			expectedPost := expectedTx.Postings[i]
+
+			if expectedPost.Account != post.Account {
+				t.Error("account names don't match")
+			}
+
+			if !expectedPost.Amount.Equal(post.Amount) {
+				t.Error("post amounts don't match")
+			}
+		}
+	}
+
 }
