@@ -41,8 +41,8 @@ func TestParseDate(t *testing.T) {
 	}
 
 	cases := []Case{
-		{in: []byte(""), out: NotDate, tail: []byte(""), err: nil},
-		{in: []byte("not_date"), out: NotDate, tail: []byte("not_date"), err: nil},
+		{in: []byte(""), out: NotDate, tail: []byte(""), err: ErrNoMatch},
+		{in: []byte("not_date"), out: NotDate, tail: []byte("not_date"), err: ErrNoMatch},
 		{in: []byte("2023/11/24"), out: date("2023/11/24"), tail: []byte(""), err: nil},
 		{in: []byte("2023-11-24"), out: date("2023/11/24"), tail: []byte(""), err: nil},
 		{in: []byte("2023/11/24 tailing bytes"), out: date("2023/11/24"), tail: []byte("tailing bytes"), err: nil},
@@ -724,6 +724,10 @@ func TestSanity(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 		return
+	}
+
+	if len(txs) != 3 {
+		t.Error("expected 3 transactions: 2 from main file + 1 from included file")
 	}
 
 	date := func(str string) (d time.Time) {

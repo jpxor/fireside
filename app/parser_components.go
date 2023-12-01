@@ -93,7 +93,7 @@ func matchDate(tok []byte) bool {
 // format simply means the line does not belong to a transaction, not an error
 func (s *Scanner) ParseDate(tok []byte) (out time.Time, tail []byte, err error) {
 	if !matchDate(tok) {
-		return NotDate, tok, nil
+		return NotDate, tok, ErrNoMatch
 	}
 	if len(tok) > 10 { // must be followed by space, tab, or newline
 		if !unicode.IsSpace(rune(tok[10])) {

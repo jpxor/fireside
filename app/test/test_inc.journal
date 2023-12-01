@@ -1,0 +1,8 @@
+
+; this journal gets added to the sanity test.journal
+
+2023/11/20 This is the tx description
+    assets:cash        $420
+    income:employer  - $420
+    stocks in            69 AAA @ $10
+    stocks out         - 69 AAA

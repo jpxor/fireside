@@ -181,7 +181,7 @@ func BenchmarkBalanceTransaction(b *testing.B) {
 	}
 	s.Scan()
 	line := s.Bytes()
-	tx, _, err := s.ParseTransaction(line)
+	tx, err := s.ParseTransaction(line)
 
 	if err != nil {
 		b.Error("failed to parse the transaction")

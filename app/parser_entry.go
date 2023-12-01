@@ -2,9 +2,12 @@ package app
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -59,24 +62,22 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 		}
 
 		// check for transaction (common case)
-		tx, match, err := s.ParseTransaction(line)
-		if match {
+		tx, err := s.ParseTransaction(line)
+		if err == nil {
 			transactions = append(transactions, tx)
 			continue
-
-		} else if err != nil {
+		} else if err != ErrNoMatch {
 			errs.add(err)
 			continue
 		}
 
 		// check for directives (rare case)
-		txs, match, err := s.ParseDirective(&journal, line)
-		if match {
+		txs, err := s.ParseDirective(&journal, line)
+		if err == nil {
 			if len(txs) > 0 {
 				transactions = append(transactions, txs...)
 			}
 			continue
-
 		} else if err != nil {
 			errs.add(err)
 			continue
@@ -100,12 +101,12 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 	return journal, transactions, errs.get()
 }
 
-func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, ok bool, err error) {
+func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, err error) {
 	var tail []byte
 	var date time.Time
 
 	date, tail, err = s.ParseDate(line)
-	if date == NotDate || err != nil {
+	if err != nil {
 		return
 	}
 
@@ -190,7 +191,6 @@ func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, ok bool, err er
 		tx.Postings = append(tx.Postings, post)
 	}
 
-	ok = true
 	return
 }
 
@@ -239,6 +239,26 @@ func balanceTransaction(tx *Transaction) error {
 	return nil
 }
 
-func (s *Scanner) ParseDirective(j *Journal, line []byte) (txs []Transaction, ok bool, err error) {
-	return
+func ParsePath(cwd, incfile string) string {
+	if filepath.IsAbs(incfile) {
+		return incfile
+	}
+	return filepath.Join(cwd, incfile)
+}
+
+func (s *Scanner) ParseDirective(j *Journal, line []byte) (txs []Transaction, err error) {
+
+	// include path should be relative to the current journal path
+	if bytes.HasPrefix(line, []byte("include")) {
+		cwd := filepath.Dir(j.Filepath)
+		incfile := ParsePath(cwd, strings.TrimSpace(string(line[len("include"):])))
+		subj, txs, err := ParseJournal(incfile)
+		if err != nil {
+			return nil, err
+		}
+		j.Includes = append(j.Includes, subj)
+		return txs, nil
+	}
+
+	return nil, ErrNoMatch
 }
