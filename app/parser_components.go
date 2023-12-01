@@ -237,14 +237,21 @@ func (s *Scanner) ParsePostPrefix(tok []byte) (out string, tail []byte, err erro
 	return
 }
 
-func (s *Scanner) ParseDecimal(tok []byte) (out decimal.Decimal, decsym string, tail []byte, err error) {
+func (s *Scanner) ParseDecimal(line []byte) (out decimal.Decimal, decsym string, tail []byte, err error) {
+	tok := line
 
-	r := bytes.LastIndexFunc(tok, unicode.IsDigit)
+	// must ignore commodity price if present
+	r := bytes.Index(line, []byte{'@'})
+	if r != -1 {
+		tok = line[:r]
+	}
+
+	r = bytes.LastIndexFunc(tok, unicode.IsDigit)
 	if r == -1 {
 		err = s.wrap(fmt.Errorf("failed for parse decimal: '%s'", tok))
 		return
 	}
-	tok, tail = s.advance(tok, r+1)
+	tok, tail = s.advance(line, r+1)
 
 	// number of digits to the right of decimal separator
 	nfractional := 0

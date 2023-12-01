@@ -459,6 +459,7 @@ func TestParsePostAmount(t *testing.T) {
 		{in: []byte("4$56"), out: amount("4.56"), decsym: "$", tail: []byte(""), err: nil},
 		{in: []byte("4 ₿ 56"), out: amount("4.56"), decsym: " ₿ ", tail: []byte(""), err: nil},
 		{in: []byte("44.23.56"), out: amount("4423.56"), decsym: "", tail: []byte(""), err: nil},
+		{in: []byte("69 AAA @ $10"), out: amount("69"), decsym: "", tail: []byte("AAA @ $10"), err: nil},
 		{in: []byte("no value"), out: decimal.Zero, decsym: "", tail: []byte(""), err: fmt.Errorf("bad format")},
 		{in: []byte("4 56"), out: decimal.Zero, decsym: "", tail: []byte(""), err: fmt.Errorf("bad format")},
 	}
@@ -739,9 +740,39 @@ func TestSanity(t *testing.T) {
 			{
 				Account: "assets:cash",
 				Amount:  fastNewDecimal([]byte("420"), 0),
+				Commodity: Commodity{
+					Type: CommodityType{
+						Prefix: "$",
+					},
+				},
 			}, {
 				Account: "income:employer",
 				Amount:  fastNewDecimal([]byte("420"), 0).Neg(),
+				Commodity: Commodity{
+					Type: CommodityType{
+						Prefix: "$",
+					},
+				},
+			}, {
+				Account: "stocks in",
+				Amount:  fastNewDecimal([]byte("69"), 0),
+				Commodity: Commodity{
+					Type: CommodityType{
+						Code: "AAA",
+					},
+					BookValue: fastNewDecimal([]byte("10"), 0),
+					ValueType: CommodityType{
+						Prefix: "$",
+					},
+				},
+			}, {
+				Account: "stocks out",
+				Amount:  fastNewDecimal([]byte("69"), 0).Neg(),
+				Commodity: Commodity{
+					Type: CommodityType{
+						Code: "AAA",
+					},
+				},
 			},
 		},
 	}
@@ -787,6 +818,14 @@ func TestSanity(t *testing.T) {
 
 			if !expectedPost.Amount.Equal(post.Amount) {
 				t.Error("post amounts don't match")
+			}
+
+			if !expectedPost.Commodity.BookValue.Equal(post.Commodity.BookValue) {
+				t.Error("book values don't match")
+			}
+
+			if expectedPost.Commodity.Type != post.Commodity.Type {
+				t.Error("commodity types don't match")
 			}
 		}
 	}
