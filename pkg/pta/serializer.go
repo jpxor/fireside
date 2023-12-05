@@ -2,10 +2,28 @@ package pta
 
 import (
 	"fmt"
+	"io/fs"
+	"os"
 	"strings"
 
 	"github.com/shopspring/decimal"
 )
+
+func (j *Journal) AppendTxs(txs []Transaction) error {
+	f, err := os.OpenFile(j.Filepath, os.O_APPEND|os.O_WRONLY, fs.ModeAppend)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	for _, tx := range txs {
+		_, err = f.WriteString(WriteTransaction(tx))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func WriteTransaction(tx Transaction) string {
 	sb := strings.Builder{}
