@@ -1,8 +1,6 @@
 package app
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -56,25 +54,4 @@ func defaultCurrency() Commodity {
 			Decimal: defaultDecimal(),
 		},
 	}
-}
-
-func (c Commodity) format(val decimal.Decimal) string {
-	var neg string
-	var code string
-	if val.LessThan(decimal.Zero) {
-		neg = "- "
-		val = val.Neg()
-	}
-	if c.Type.Code != "" {
-		code = " " + c.Type.Code
-	}
-	str := fmt.Sprintf("%s%s%s%s%s", neg, c.Type.Prefix, val, c.Type.Postfix, code)
-	if c.Type.Decimal != "." {
-		str = strings.Replace(str, ".", c.Type.Decimal, 1)
-	}
-	return str
-}
-
-func (p Posting) AmountStr() string {
-	return p.Commodity.format(p.Amount)
 }

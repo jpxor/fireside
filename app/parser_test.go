@@ -798,7 +798,7 @@ func TestSanity(t *testing.T) {
 		})
 
 		// allow to check visually
-		fmt.Println(tx)
+		fmt.Print(WriteTransaction(tx))
 
 		if !expectedTx.Date.Equal(tx.Date) {
 			t.Error("dates don't match")
