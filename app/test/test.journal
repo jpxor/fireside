@@ -4,7 +4,7 @@
 
 include ./test_inc.journal
 
-2023/11/20 This is the tx description ; comment
+2023/11/20 ! (the code) This is the tx description ; comment
     assets:cash        $420  ; a comment
     income:employer  - $420
     stocks in            69 AAA @ $10

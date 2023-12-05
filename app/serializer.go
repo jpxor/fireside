@@ -11,7 +11,7 @@ func WriteTransaction(tx Transaction) string {
 	sb := strings.Builder{}
 	sb.Grow(14 + len(tx.Code) + len(tx.Description))
 
-	sb.WriteString(tx.Date.Format("2006/01/02 "))
+	sb.WriteString(tx.Date.Format("2006/01/02"))
 	if tx.Pending {
 		sb.WriteString(" !")
 	}
@@ -21,6 +21,9 @@ func WriteTransaction(tx Transaction) string {
 		sb.WriteString(")")
 	}
 	if tx.Description != "" {
+		if !tx.Pending && tx.Code == "" {
+			sb.WriteString(" ")
+		}
 		sb.WriteString(" ")
 		sb.WriteString(tx.Description)
 	}
