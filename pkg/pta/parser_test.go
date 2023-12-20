@@ -696,6 +696,52 @@ func TestFastNewDecimal(t *testing.T) {
 	}
 }
 
+func TestBalanceTransaction(t *testing.T) {
+
+	// Balanced
+	tx := &Transaction{}
+	tx.Postings = []Posting{
+		{"", Lot{Amount: decimal.New(10, 0)}},
+		{"", Lot{Amount: decimal.New(-10, 0)}},
+	}
+	if err := balanceTransaction(tx); err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+
+	// Unbalanced
+	tx = &Transaction{}
+	tx.Postings = []Posting{
+		{"", Lot{Amount: decimal.New(10, 0)}},
+		{"", Lot{Amount: decimal.New(-5, 0)}},
+	}
+	if err := balanceTransaction(tx); err == nil {
+		t.Errorf("Expected error, got nil")
+	}
+
+	// Multiple missing
+	tx = &Transaction{}
+	tx.Postings = []Posting{
+		{"", Lot{Amount: decimal.New(0, 0)}},
+		{"", Lot{Amount: decimal.New(0, 0)}},
+	}
+	if err := balanceTransaction(tx); err == nil {
+		t.Errorf("Expected error, got nil")
+	}
+
+	// Infer missing
+	tx = &Transaction{}
+	tx.Postings = []Posting{
+		{"", Lot{Amount: decimal.New(10, 0)}},
+		{"", Lot{Amount: decimal.New(0, 0)}},
+	}
+	if err := balanceTransaction(tx); err != nil {
+		t.Errorf("Expected no error, got %v", err)
+	}
+	if !tx.Postings[1].Amount.Equal(decimal.New(-10, 0)) {
+		t.Errorf("Expected inferred amount -10, got %v", tx.Postings[1].Amount)
+	}
+}
+
 func TestErrJournal(t *testing.T) {
 	file := "./test/err.journal"
 	_, _, err := ParseJournal(file)

@@ -195,6 +195,30 @@ func BenchmarkBalanceTransaction(b *testing.B) {
 	}
 }
 
+// 1035 ns/op	     232 B/op	      11 allocs/op
+func BenchmarkBalanceTransactionUnbalanced(b *testing.B) {
+	buf := bytes.NewBufferString(
+		`2023/11/20 This is the tx description
+			assets:cash        $420
+			income:employer
+
+`)
+	s := Scanner{
+		Scanner: bufio.NewScanner(buf),
+	}
+	s.Scan()
+	line := s.Bytes()
+	tx, err := s.ParseTransaction(line)
+
+	if err != nil {
+		b.Error("failed to parse the transaction")
+	}
+
+	for i := 0; i < b.N; i++ {
+		balanceTransaction(&tx)
+	}
+}
+
 // 83125 ns/op	    6192 B/op	      41 allocs/op
 func BenchmarkParser(b *testing.B) {
 	file := "./test/bench2.journal"
