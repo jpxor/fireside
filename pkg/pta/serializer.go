@@ -115,9 +115,10 @@ func commodityStringPadded(width int, c Commodity, v decimal.Decimal) string {
 	}
 
 	if len(valstr) > len("000.00") {
-		revstr := stringsReverse(valstr[:len(valstr)-3])
+		revstr := stringsReverse(valstr)
 		var sb strings.Builder
-		for i, r := range revstr {
+		sb.WriteString(revstr[:3])
+		for i, r := range revstr[3:] {
 			if i > 0 && i%3 == 0 {
 				sb.WriteString(format.Thousandths)
 			}
@@ -128,7 +129,7 @@ func commodityStringPadded(width int, c Commodity, v decimal.Decimal) string {
 
 	var pad int
 	if width > 0 {
-		pad = width - (len(neg) + len(format.Prefix) + len(valstr) + len(format.Postfix))
+		pad = width - (len(neg) + len(format.Prefix) + len(valstr) + len(format.Postfix) + 2)
 		if pad < 0 {
 			pad = 0
 		}

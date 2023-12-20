@@ -1,6 +1,9 @@
 package pta
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 var DefaultCurrency = Commodity{
 	Type: CURRENCY,
@@ -15,7 +18,7 @@ var currencyFormats = map[string]CommodityFormat{
 	"CLP": {"$", ",", ".", ""},
 	"CNY": {"¥", ",", ".", ""},
 	"COP": {"$", ",", ".", ""},
-	"CZK": {"", ".", ",", "Kč"},
+	"CZK": {"", ".", ",", " Kč"},
 	"DKK": {"kr.", ".", ",", ""},
 	"EUR": {"€", ".", ",", ""},
 	"HKD": {"HK$", ",", ".", ""},
@@ -35,7 +38,7 @@ var currencyFormats = map[string]CommodityFormat{
 	"SAR": {"", ",", ".", "﷼"},
 	"SGD": {"$", ",", ".", ""},
 	"ZAR": {"R", ",", ".", ""},
-	"SEK": {"", ".", ",", "kr"},
+	"SEK": {"", ".", ",", " kr"},
 	"CHF": {"fr.", ".", ",", ""},
 	"TWD": {"元", ",", ".", ""},
 	"THB": {"", ",", ".", "฿"},
@@ -65,14 +68,16 @@ func findMatchingCurrency(f CommodityFormat) (Commodity, error) {
 		return DefaultCurrency, nil
 	}
 	defaultFmt := currencyFormats[DefaultCurrency.Code]
-	if defaultFmt.Prefix == f.Prefix && defaultFmt.Postfix == f.Postfix {
+	if strings.TrimSpace(defaultFmt.Prefix) == f.Prefix &&
+		strings.TrimSpace(defaultFmt.Postfix) == f.Postfix {
 		return DefaultCurrency, nil
 	}
 	if f.Prefix == "$" {
 		return DefaultCurrency, fmt.Errorf("ambiguous currency format %+v", f)
 	}
 	for code, fmt := range currencyFormats {
-		if fmt.Prefix == f.Prefix && fmt.Postfix == f.Postfix {
+		if strings.TrimSpace(fmt.Prefix) == f.Prefix &&
+			strings.TrimSpace(fmt.Postfix) == f.Postfix {
 			return Commodity{
 				Type: CURRENCY,
 				Code: code,
