@@ -775,6 +775,9 @@ func TestFindMatchingCurrency(t *testing.T) {
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
+
+	// reset default currency
+	DefaultCurrency = Commodity{CURRENCY, "USD"}
 }
 
 func TestErrJournal(t *testing.T) {
