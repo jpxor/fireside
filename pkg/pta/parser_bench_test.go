@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"bytes"
 	"testing"
+
+	"github.com/shopspring/decimal"
 )
 
 // 151.7 ns/op	       0 B/op	       0 allocs/op
@@ -112,14 +114,15 @@ func BenchmarkParsePostfix(b *testing.B) {
 	}
 }
 
-// 254.1 ns/op	      40 B/op	       2 allocs/op
-func BenchmarkParsePrice(b *testing.B) {
+// 285.1 ns/op	      40 B/op	       2 allocs/op
+func BenchmarkParseValue(b *testing.B) {
 	s := Scanner{
-		filename: "BenchmarkParsePrice",
+		filename: "BenchmarkParseValue",
 	}
+	count, _ := decimal.NewFromString("1")
 	in := []byte("@ $34.54")
 	for i := 0; i < b.N; i++ {
-		s.ParsePrice(in)
+		s.ParseValue(count, in)
 	}
 }
 
@@ -132,7 +135,7 @@ func BenchmarkFastDecimal(b *testing.B) {
 	}
 }
 
-// 2087 ns/op	    4224 B/op	       2 allocs/op
+// 1984 ns/op	    4224 B/op	       2 allocs/op
 func BenchmarkParseTransaction(b *testing.B) {
 	buf := bytes.NewBufferString(
 		`2023/11/20 ! (code) description
@@ -168,7 +171,7 @@ func BenchmarkTrimSpace(b *testing.B) {
 	}
 }
 
-// 1984 ns/op	     376 B/op	      12 allocs/op
+// 934.2 ns/op	     232 B/op	      11 allocs/op
 func BenchmarkBalanceTransaction(b *testing.B) {
 	buf := bytes.NewBufferString(
 		`2023/11/20 This is the tx description
@@ -192,7 +195,7 @@ func BenchmarkBalanceTransaction(b *testing.B) {
 	}
 }
 
-// 90077 ns/op	    6400 B/op	      42 allocs/op
+// 83125 ns/op	    6192 B/op	      41 allocs/op
 func BenchmarkParser(b *testing.B) {
 	file := "./test/bench2.journal"
 	for i := 0; i < b.N; i++ {

@@ -1,7 +1,6 @@
 package pta
 
 import (
-	"fmt"
 	"io/fs"
 	"os"
 	"strings"
@@ -48,14 +47,14 @@ func WriteTransaction(tx Transaction) string {
 
 	acctWidth := 0
 	for _, post := range tx.Postings {
-		if acctWidth < len(post.Account)+2 {
-			acctWidth = len(post.Account) + 2
+		if acctWidth < len(post.Account) {
+			acctWidth = len(post.Account)
 		}
 	}
 
 	amountWidth := 0
 	for _, post := range tx.Postings {
-		nd := len(post.Amount.StringFixed(2))
+		nd := len(post.AmountStr(0))
 		if amountWidth < nd {
 			amountWidth = nd
 		}
@@ -64,10 +63,10 @@ func WriteTransaction(tx Transaction) string {
 	for _, post := range tx.Postings {
 		sb.WriteString("\r\n\t")
 		sb.WriteString(post.Account)
-		sb.WriteString(strings.Repeat(" ", acctWidth-len(post.Account)))
+		sb.WriteString(strings.Repeat(" ", 2+acctWidth-len(post.Account)))
 		sb.WriteString(post.AmountStr(amountWidth))
 
-		if !post.Commodity.BookValue.Equal(decimal.Zero) {
+		if !post.Lot.UnitValue.Decimal.Equal(decimal.Zero) {
 			sb.WriteString(" @ ")
 			sb.WriteString(post.ValueStr())
 		}
@@ -77,40 +76,75 @@ func WriteTransaction(tx Transaction) string {
 }
 
 func (p Posting) ValueStr() string {
-	sb := strings.Builder{}
-	sb.WriteString(p.Commodity.ValueType.Prefix)
-	sb.WriteString(p.Commodity.BookValue.String())
-	sb.WriteString(p.Commodity.ValueType.Postfix)
-	return sb.String()
+	return commodityStringPadded(0, p.Lot.UnitValue.Commodity, p.Lot.UnitValue.Decimal)
 }
 
 func (p Posting) AmountStr(width int) string {
-	return p.Commodity.Type.format(p.Amount, width)
+	return commodityStringPadded(width, p.Commodity, p.Amount)
 }
 
-func (c CommodityType) format(val decimal.Decimal, maxWidth int) string {
-	var code string = ""
+func commodityStringPadded(width int, c Commodity, v decimal.Decimal) string {
+
+	stringsReverse := func(s string) string {
+		runes := []rune(s)
+		for i, j := 0, len(runes)-1; i < j; i, j = i+1, j-1 {
+			runes[i], runes[j] = runes[j], runes[i]
+		}
+		return string(runes)
+	}
+
+	var format CommodityFormat
+	if c.Type == CURRENCY {
+		format = currencyFormats[c.Code]
+	} else {
+		format = DefaultNumberFormat
+	}
+
 	var neg string = "  "
-	var prefix string = " "
-
-	if val.LessThan(decimal.Zero) {
+	if width == 0 {
+		neg = ""
+	}
+	if v.LessThan(decimal.Zero) {
 		neg = "- "
-		val = val.Abs()
-	}
-	if c.Code != "" {
-		code = " " + c.Code
-	}
-	if c.Prefix != "" {
-		prefix = c.Prefix
-	}
-	width := len(val.StringFixed(2))
-	if maxWidth == 0 {
-		maxWidth = width
-	}
-	str := fmt.Sprintf("%s%s%s%s%s%s", neg, prefix, strings.Repeat(" ", maxWidth-width), val.StringFixedBank(2), c.Postfix, code)
-	if c.Decimal != "." && c.Decimal != "" {
-		str = strings.Replace(str, ".", c.Decimal, 1)
+		v = v.Abs()
 	}
 
-	return str
+	valstr := v.StringFixed(2)
+	if format.Decimal != "." {
+		valstr = strings.Replace(valstr, ".", format.Decimal, 1)
+	}
+
+	if len(valstr) > len("000.00") {
+		revstr := stringsReverse(valstr[:len(valstr)-3])
+		var sb strings.Builder
+		for i, r := range revstr {
+			if i > 0 && i%3 == 0 {
+				sb.WriteString(format.Thousandths)
+			}
+			sb.WriteRune(r)
+		}
+		valstr = stringsReverse(sb.String())
+	}
+
+	var pad int
+	if width > 0 {
+		pad = width - (len(neg) + len(format.Prefix) + len(valstr) + len(format.Postfix))
+		if pad < 0 {
+			pad = 0
+		}
+	}
+
+	sb := strings.Builder{}
+	sb.WriteString(neg)
+	sb.WriteString(format.Prefix)
+	sb.WriteString(strings.Repeat(" ", pad))
+	sb.WriteString(valstr)
+	sb.WriteString(format.Postfix)
+
+	if c.Code != DefaultCurrency.Code {
+		sb.WriteString(" ")
+		sb.WriteString(c.Code)
+	}
+
+	return sb.String()
 }

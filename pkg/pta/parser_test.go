@@ -576,14 +576,13 @@ func TestParsePostfix(t *testing.T) {
 	}
 }
 
-func TestParsePrice(t *testing.T) {
+func TestParseValue(t *testing.T) {
 	type Case struct {
-		in      []byte
-		val     decimal.Decimal
-		Type    CommodityType
-		perUnit bool
-		tail    []byte
-		err     error
+		in   []byte
+		val  decimal.Decimal
+		com  Commodity
+		tail []byte
+		err  error
 	}
 
 	amount := func(s string) decimal.Decimal {
@@ -592,18 +591,16 @@ func TestParsePrice(t *testing.T) {
 	}
 
 	cases := []Case{
-		{in: []byte(""), val: decimal.Zero, tail: []byte("")},
+		{in: []byte(""), val: decimal.Zero, tail: []byte(""), com: Commodity{CURRENCY, "USD"}},
 		{in: []byte("text"), val: decimal.Zero, err: fmt.Errorf("bad format")},
 		{in: []byte("@text"), val: decimal.Zero, err: fmt.Errorf("bad format")},
 		{in: []byte("@@text"), val: decimal.Zero, err: fmt.Errorf("bad format")},
-		{in: []byte("@1"), val: amount("1"), perUnit: true},
-		{in: []byte("@@1"), val: amount("1"), perUnit: false},
-		{in: []byte("@ 1"), val: amount("1"), perUnit: true},
-		{in: []byte("@@ 1"), val: amount("1"), perUnit: false},
-		{in: []byte("@ $1"), val: amount("1"), perUnit: true, Type: CommodityType{Prefix: "$"}},
-		{in: []byte("@@ $1"), val: amount("1"), perUnit: false, Type: CommodityType{Prefix: "$"}},
-		{in: []byte("@ 1$"), val: amount("1"), perUnit: true, Type: CommodityType{Postfix: "$"}},
-		{in: []byte("@@ 1$"), val: amount("1"), perUnit: false, Type: CommodityType{Postfix: "$"}},
+		{in: []byte("@1"), val: amount("1"), com: Commodity{CURRENCY, "USD"}},
+		{in: []byte("@@1"), val: amount("0.5"), com: Commodity{CURRENCY, "USD"}},
+		{in: []byte("@ 1"), val: amount("1"), com: Commodity{CURRENCY, "USD"}},
+		{in: []byte("@@ 1"), val: amount("0.5"), com: Commodity{CURRENCY, "USD"}},
+		{in: []byte("@ $1"), val: amount("1"), com: Commodity{CURRENCY, "USD"}},
+		{in: []byte("@@ $1"), val: amount("0.5"), com: Commodity{CURRENCY, "USD"}},
 	}
 
 	s := Scanner{
@@ -616,7 +613,7 @@ func TestParsePrice(t *testing.T) {
 		s.row += 1
 		s.col = 0
 
-		val, Type, perUnit, tail, err := s.ParsePrice(test.in)
+		val, tail, err := s.ParseValue(amount("2"), test.in)
 
 		if !matchErrs(err, test.err) {
 			t.Errorf("errs do not match (#%d)", i)
@@ -634,18 +631,11 @@ func TestParsePrice(t *testing.T) {
 				fmt.Printf("expected: '%s'\n", test.val)
 			}
 
-			if !reflect.DeepEqual(Type, test.Type) {
-				t.Errorf("types do not match (#%d)", i)
+			if !reflect.DeepEqual(DefaultCurrency, test.com) {
+				t.Errorf("commodities do not match (#%d)", i)
 				fmt.Printf("in      : %s\n", test.in)
-				fmt.Printf("got type: '%+v'\n", Type)
-				fmt.Printf("expected: '%+v'\n", test.Type)
-			}
-
-			if perUnit != test.perUnit {
-				t.Errorf("perunits do not match (#%d)", i)
-				fmt.Printf("in      : %s\n", test.in)
-				fmt.Printf("got peru: '%+v'\n", perUnit)
-				fmt.Printf("expected: '%+v'\n", test.perUnit)
+				fmt.Printf("got type: '%+v'\n", test.com)
+				fmt.Printf("expected: '%+v'\n", DefaultCurrency)
 			}
 
 			if !bytes.Equal(tail, test.tail) {
@@ -743,37 +733,44 @@ func TestSanity(t *testing.T) {
 		Postings: []Posting{
 			{
 				Account: "assets:cash",
-				Amount:  fastNewDecimal([]byte("420"), 0),
-				Commodity: Commodity{
-					Type: CommodityType{
-						Prefix: "$",
+				Lot: Lot{
+					Amount: fastNewDecimal([]byte("420"), 0),
+					Commodity: Commodity{
+						Type: CURRENCY,
+						Code: "",
 					},
 				},
 			}, {
 				Account: "income:employer",
-				Amount:  fastNewDecimal([]byte("420"), 0).Neg(),
-				Commodity: Commodity{
-					Type: CommodityType{
-						Prefix: "$",
+				Lot: Lot{
+					Amount: fastNewDecimal([]byte("420"), 0).Neg(),
+					Commodity: Commodity{
+						Type: CURRENCY,
+						Code: "",
 					},
 				},
 			}, {
 				Account: "stocks in",
-				Amount:  fastNewDecimal([]byte("69"), 0),
-				Commodity: Commodity{
-					Type: CommodityType{
+				Lot: Lot{
+					Amount: fastNewDecimal([]byte("69"), 0),
+					Commodity: Commodity{
+						Type: STOCK,
 						Code: "AAA",
 					},
-					BookValue: fastNewDecimal([]byte("10"), 0),
-					ValueType: CommodityType{
-						Prefix: "$",
+					UnitValue: Value{
+						Decimal: fastNewDecimal([]byte("10"), 0),
+						Commodity: Commodity{
+							Type: CURRENCY,
+							Code: "",
+						},
 					},
 				},
 			}, {
 				Account: "stocks out",
-				Amount:  fastNewDecimal([]byte("69"), 0).Neg(),
-				Commodity: Commodity{
-					Type: CommodityType{
+				Lot: Lot{
+					Amount: fastNewDecimal([]byte("69"), 0).Neg(),
+					Commodity: Commodity{
+						Type: STOCK,
 						Code: "AAA",
 					},
 				},
@@ -817,19 +814,23 @@ func TestSanity(t *testing.T) {
 			expectedPost := expectedTx.Postings[i]
 
 			if expectedPost.Account != post.Account {
-				t.Error("account names don't match")
+				t.Errorf("account names don't match (%d)\r\n", i)
 			}
 
 			if !expectedPost.Amount.Equal(post.Amount) {
-				t.Error("post amounts don't match")
+				t.Errorf("post amounts don't match (%d)\r\n", i)
 			}
 
-			if !expectedPost.Commodity.BookValue.Equal(post.Commodity.BookValue) {
-				t.Error("book values don't match")
+			if !expectedPost.UnitValue.Equal(post.UnitValue.Decimal) {
+				t.Errorf("book values don't match (%d)\r\n", i)
+				fmt.Println("expected: ", expectedPost.UnitValue)
+				fmt.Println("got     : ", post.UnitValue.Decimal)
 			}
 
 			if expectedPost.Commodity.Type != post.Commodity.Type {
-				t.Error("commodity types don't match")
+				t.Errorf("commodity types don't match (%d)\r\n", i)
+				fmt.Println("expected: ", expectedPost.Commodity.Type)
+				fmt.Println("got     : ", post.Commodity.Type)
 			}
 		}
 	}

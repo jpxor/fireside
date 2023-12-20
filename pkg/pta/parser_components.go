@@ -188,7 +188,7 @@ func (s *Scanner) ParseIndent(tok []byte) (tail []byte, err error) {
 }
 
 // account name ends with double space, tab, or EOL
-// the name is allowed to contan spaces
+// the name is allowed to contain spaces
 func (s *Scanner) ParseAcctName(tok []byte) (out string, tail []byte, err error) {
 
 	endOfNameIndex := func(line []byte) int {
@@ -206,6 +206,28 @@ func (s *Scanner) ParseAcctName(tok []byte) (out string, tail []byte, err error)
 	i := endOfNameIndex(tok)
 	tok, tail = s.advance(tok, i)
 	out = string(tok)
+	return
+}
+
+func (s *Scanner) ParseLot(tok []byte) (lot Lot, tail []byte, err error) {
+	var neg bool
+	neg, tail, err = s.ParsePostNeg(tok)
+	if err != nil {
+		return
+	}
+
+	lot.Amount, lot.Commodity, tail, err = s.ParseCommodity(tail)
+	if err != nil {
+		return
+	}
+
+	if neg {
+		lot.Amount = lot.Amount.Neg()
+	}
+
+	if len(tail) > 0 {
+		lot.UnitValue, tail, err = s.ParseValue(lot.Amount, tail)
+	}
 	return
 }
 
@@ -376,19 +398,30 @@ func (s *Scanner) ParseCommodity(tok []byte) (amount decimal.Decimal, com Commod
 	if len(tok) == 0 {
 		return
 	}
-	com.Type.Prefix, tail, err = s.ParsePostPrefix(tok)
+	var format CommodityFormat
+	format.Prefix, tail, err = s.ParsePostPrefix(tok)
 	if err != nil {
 		return
 	}
-	amount, com.Type.Decimal, tail, err = s.ParseDecimal(tail)
+	amount, format.Decimal, tail, err = s.ParseDecimal(tail)
 	if err != nil {
 		return
 	}
-	com.Type.Postfix, com.Type.Code, tail = s.ParsePostfix(tail)
+	format.Postfix, com.Code, tail = s.ParsePostfix(tail)
+
+	if com.Code == "" {
+		com, err = findMatchingCurrency(format)
+		if err != nil {
+			return
+		}
+	} else {
+		com = commodityFromCode(com.Code)
+	}
+
 	return
 }
 
-func (s *Scanner) ParsePrice(tok []byte) (value decimal.Decimal, comType CommodityType, perUnit bool, tail []byte, err error) {
+func (s *Scanner) ParseValue(count decimal.Decimal, tok []byte) (value Value, tail []byte, err error) {
 	if len(tok) == 0 {
 		return
 	}
@@ -402,21 +435,45 @@ func (s *Scanner) ParsePrice(tok []byte) (value decimal.Decimal, comType Commodi
 		err = s.wrap(fmt.Errorf("missing unit value"))
 		return
 	}
+
 	// @@ means total value
+	var perUnit bool
 	if tok[0] == '@' {
 		_, tok = s.advance(tok, 1)
 		perUnit = false
 	} else {
 		perUnit = true
 	}
-	comType.Prefix, tail, err = s.ParsePostPrefix(tok)
+
+	var format CommodityFormat
+	format.Prefix, tail, err = s.ParsePostPrefix(tok)
 	if err != nil {
 		return
 	}
-	value, comType.Decimal, tail, err = s.ParseDecimal(tail)
+
+	value.Decimal, format.Decimal, tail, err = s.ParseDecimal(tail)
 	if err != nil {
 		return
 	}
-	comType.Postfix, comType.Code, tail = s.ParsePostfix(tail)
+
+	format.Postfix, value.Code, tail = s.ParsePostfix(tail)
+
+	if value.Code == "" {
+		value.Commodity, err = findMatchingCurrency(format)
+		if err != nil {
+			return
+		}
+	} else {
+		value.Commodity = commodityFromCode(value.Code)
+		if value.Type != CURRENCY {
+			err = s.wrap(fmt.Errorf("unknown currency code: '%s'", value.Code))
+			return
+		}
+	}
+
+	if !perUnit && count.GreaterThan(decimal.Zero) {
+		value.Decimal = value.Decimal.Div(count)
+	}
+
 	return
 }

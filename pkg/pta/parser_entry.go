@@ -46,8 +46,8 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 
 	journal := Journal{
 		Filepath:        s.filename,
-		Decimal:         defaultDecimal(),
-		DefaultCurrency: defaultCurrency(),
+		Decimal:         DefaultNumberFormat.Decimal,
+		DefaultCurrency: DefaultCurrency,
 		Alias:           make(map[string]string),
 		Includes:        make([]Journal, 0),
 	}
@@ -155,33 +155,9 @@ func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, err error) {
 			return
 		}
 
-		var neg bool
-		neg, tail, err = s.ParsePostNeg(tail)
+		post.Lot, tail, err = s.ParseLot(tail)
 		if err != nil {
 			return
-		}
-
-		post.Amount, post.Commodity, tail, err = s.ParseCommodity(tail)
-		if err != nil {
-			return
-		}
-
-		if neg {
-			post.Amount = post.Amount.Neg()
-		}
-
-		if len(tail) > 0 {
-			var perUnit bool
-			post.Commodity.BookValue, post.Commodity.ValueType, perUnit,
-				tail, err = s.ParsePrice(tail)
-
-			if err != nil {
-				return
-			}
-
-			if !perUnit && !(post.Commodity.BookValue == decimal.Zero) {
-				post.Commodity.BookValue = post.Commodity.BookValue.Div(post.Amount)
-			}
 		}
 
 		if len(tail) > 0 {
@@ -201,7 +177,7 @@ func balanceTransaction(tx *Transaction) error {
 
 	// 1. sum all amounts per commodity type
 	// 2. identify posting with missing amount
-	balances := make(map[CommodityType]decimal.Decimal)
+	balances := make(map[string]decimal.Decimal)
 	var inferredPost *Posting = nil
 
 	missingCount := 0
@@ -212,7 +188,7 @@ func balanceTransaction(tx *Transaction) error {
 			missingCount++
 			inferredPost = post
 		} else {
-			balances[post.Commodity.Type] = balances[post.Commodity.Type].Add(post.Amount)
+			balances[post.Commodity.Code] = balances[post.Commodity.Code].Add(post.Amount)
 		}
 	}
 
@@ -223,10 +199,10 @@ func balanceTransaction(tx *Transaction) error {
 
 	// 3. check balances (should all equal zero)
 	// 4. infer the one missing amount if needed
-	for com, balance := range balances {
+	for code, balance := range balances {
 		if !balance.Equal(decimal.Zero) {
 			if missingCount > 0 {
-				inferredPost.Commodity.Type = com
+				inferredPost.Commodity = commodityFromCode(code)
 				inferredPost.Amount = balance.Neg()
 				missingCount--
 			} else {

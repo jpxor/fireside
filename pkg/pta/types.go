@@ -6,6 +6,17 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+const (
+	CURRENCY = CommodityType("currency|fungible")
+	STOCK    = CommodityType("stock|fungible")
+	OTHER    = CommodityType("nonfungible")
+)
+
+var DefaultNumberFormat = CommodityFormat{
+	Thousandths: ",",
+	Decimal:     ".",
+}
+
 type Journal struct {
 	Filepath        string
 	Alias           map[string]string
@@ -25,33 +36,32 @@ type Transaction struct {
 }
 
 type Posting struct {
-	Account   string
+	Account string
+	Lot
+}
+
+type Lot struct {
+	Date      time.Time
 	Amount    decimal.Decimal
-	Commodity Commodity
+	UnitValue Value
+	Commodity
+}
+
+type Value struct {
+	decimal.Decimal
+	Commodity
 }
 
 type Commodity struct {
-	Type      CommodityType
-	ValueType CommodityType
-	BookValue decimal.Decimal
+	Type CommodityType
+	Code string
 }
 
-type CommodityType struct {
-	Prefix  string
-	Decimal string
-	Postfix string
-	Code    string
-}
+type CommodityType string
 
-func defaultDecimal() string {
-	return "."
-}
-
-func defaultCurrency() Commodity {
-	return Commodity{
-		Type: CommodityType{
-			Prefix:  "$",
-			Decimal: defaultDecimal(),
-		},
-	}
+type CommodityFormat struct {
+	Prefix      string
+	Thousandths string
+	Decimal     string
+	Postfix     string
 }
