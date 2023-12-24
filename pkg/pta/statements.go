@@ -50,34 +50,6 @@ func ComputeBalanceStatement(startingBalance BalanceStatement, transactions []Tr
 	return statement
 }
 
-func aggregateLotsPerCode(lots []Lot) []Lot {
-	lotsByCode := make(map[string][]Lot)
-	for _, lot := range lots {
-		lotsByCode[lot.Commodity.Code] = append(lotsByCode[lot.Commodity.Code], lot)
-	}
-	aggregated := make([]Lot, 0, len(lotsByCode))
-	for code, lots := range lotsByCode {
-		reduced := Lot{
-			Commodity: Commodity{
-				Code: code,
-				Type: lots[0].Commodity.Type,
-			},
-		}
-		for _, lot := range lots {
-			if reduced.Commodity.Type == CURRENCY {
-				reduced.Amount = reduced.Amount.Add(lot.Amount)
-			} else {
-				totVal := reduced.Amount.Mul(reduced.UnitValue.Decimal)
-				totVal = totVal.Add(lot.Amount.Mul(lot.UnitValue.Decimal))
-				reduced.Amount = reduced.Amount.Add(lot.Amount)
-				reduced.UnitValue.Decimal = totVal.Div(reduced.Amount)
-			}
-		}
-		aggregated = append(aggregated, reduced)
-	}
-	return aggregated
-}
-
 func ComputeIncomeStatement(transactions []Transaction) IncomeStatement {
 	statement := IncomeStatement{
 		revenue:  make(map[string][]Lot),
@@ -99,7 +71,7 @@ func ComputeIncomeStatement(transactions []Transaction) IncomeStatement {
 	for acct, lots := range statement.revenue {
 		lots = aggregateLotsPerCode(lots)
 		// by convention, revenue is negative, but we need it to
-		// as positive in the statement
+		// show as positive in the statement
 		for i := range lots {
 			lots[i].Amount = lots[i].Amount.Neg()
 		}
@@ -127,4 +99,32 @@ func ComputeIncomeStatement(transactions []Transaction) IncomeStatement {
 		statement.netIncome = append(statement.netIncome, lot)
 	}
 	return statement
+}
+
+func aggregateLotsPerCode(lots []Lot) []Lot {
+	lotsByCode := make(map[string][]Lot)
+	for _, lot := range lots {
+		lotsByCode[lot.Commodity.Code] = append(lotsByCode[lot.Commodity.Code], lot)
+	}
+	aggregated := make([]Lot, 0, len(lotsByCode))
+	for code, lots := range lotsByCode {
+		reduced := Lot{
+			Commodity: Commodity{
+				Code: code,
+				Type: lots[0].Commodity.Type,
+			},
+		}
+		for _, lot := range lots {
+			if reduced.Commodity.Type == CURRENCY {
+				reduced.Amount = reduced.Amount.Add(lot.Amount)
+			} else {
+				totVal := reduced.Amount.Mul(reduced.UnitValue.Decimal)
+				totVal = totVal.Add(lot.Amount.Mul(lot.UnitValue.Decimal))
+				reduced.Amount = reduced.Amount.Add(lot.Amount)
+				reduced.UnitValue.Decimal = totVal.Div(reduced.Amount)
+			}
+		}
+		aggregated = append(aggregated, reduced)
+	}
+	return aggregated
 }
