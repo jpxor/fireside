@@ -18,8 +18,8 @@ func TestComputeIncomeStatement(t *testing.T) {
 		name:         "empty",
 		transactions: []Transaction{},
 		expected: IncomeStatement{
-			revenue:  make(map[string]decimal.Decimal),
-			expenses: make(map[string]decimal.Decimal),
+			revenue:  make(map[string][]Lot),
+			expenses: make(map[string][]Lot),
 		},
 	}, {
 		name: "simple",
@@ -28,48 +28,32 @@ func TestComputeIncomeStatement(t *testing.T) {
 			{Postings: []Posting{{Account: "expenses:food:takeout", Lot: Lot{Amount: decimal.New(50, 0), Commodity: Commodity{Type: CURRENCY}}}}},
 		},
 		expected: IncomeStatement{
-			revenue:   map[string]decimal.Decimal{"income:employer:salary": decimal.New(1000, 0)},
-			expenses:  map[string]decimal.Decimal{"expenses:food:takeout": decimal.New(50, 0)},
-			netIncome: decimal.New(950, 0),
+			revenue:   map[string][]Lot{"income:employer:salary": {{Amount: decimal.New(1000, 0), Commodity: Commodity{Type: CURRENCY}}}},
+			expenses:  map[string][]Lot{"expenses:food:takeout": {{Amount: decimal.New(50, 0), Commodity: Commodity{Type: CURRENCY}}}},
+			netIncome: []Lot{{Amount: decimal.New(950, 0), Commodity: Commodity{Type: CURRENCY}}},
 		},
 	}}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			statement := ComputeIncomeStatement(tc.transactions)
-			if len(statement.revenue) != len(tc.expected.revenue) {
-				t.Errorf("len revenue mismatch")
-				fmt.Printf("   got: %v\n", statement.revenue)
-				fmt.Printf("expect: %v\n", tc.expected.revenue)
-				return
+			err := compareAccounts(statement.revenue, tc.expected.revenue)
+			if err != nil {
+				t.Errorf("revenue mismatch: %s", err)
 			}
-			if len(statement.expenses) != len(tc.expected.expenses) {
-				t.Errorf("len expenses mismatch")
-				fmt.Printf("   got: %v\n", statement.expenses)
-				fmt.Printf("expect: %v\n", tc.expected.expenses)
-				return
+			err = compareAccounts(statement.expenses, tc.expected.expenses)
+			if err != nil {
+				t.Errorf("expenses mismatch: %s", err)
 			}
-			for k, v := range statement.revenue {
-				if !v.Equal(tc.expected.revenue[k]) {
-					t.Errorf("revenue mismatch")
-					fmt.Printf("   got: %v\n", statement.expenses)
-					fmt.Printf("expect: %v\n", tc.expected.expenses)
-					return
+			if len(statement.netIncome) != len(tc.expected.netIncome) {
+				t.Errorf("net income length mismatch: got %d, want %d", len(statement.netIncome), len(tc.expected.netIncome))
+			}
+			for i, gotlot := range statement.netIncome {
+				explot := tc.expected.netIncome[i]
+				err := compareLots(gotlot, explot)
+				if err != nil {
+					t.Errorf("net income mismatch: %s", err)
 				}
-			}
-			for k, v := range statement.expenses {
-				if !v.Equal(tc.expected.expenses[k]) {
-					t.Errorf("expenses mismatch")
-					fmt.Printf("   got: %v\n", statement.expenses)
-					fmt.Printf("expect: %v\n", tc.expected.expenses)
-					return
-				}
-			}
-			if !statement.netIncome.Equal(tc.expected.netIncome) {
-				t.Errorf("netIncome mismatch")
-				fmt.Printf("   got: %v\n", statement.expenses)
-				fmt.Printf("expect: %v\n", tc.expected.expenses)
-				return
 			}
 		})
 	}

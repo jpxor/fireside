@@ -2,8 +2,6 @@ package pta
 
 import (
 	"strings"
-
-	"github.com/shopspring/decimal"
 )
 
 type BalanceStatement struct {
@@ -12,9 +10,9 @@ type BalanceStatement struct {
 }
 
 type IncomeStatement struct {
-	revenue   map[string]decimal.Decimal
-	expenses  map[string]decimal.Decimal
-	netIncome decimal.Decimal
+	revenue   map[string][]Lot
+	expenses  map[string][]Lot
+	netIncome []Lot
 }
 
 func ComputeBalanceStatement(startingBalance BalanceStatement, transactions []Transaction) BalanceStatement {
@@ -30,7 +28,7 @@ func ComputeBalanceStatement(startingBalance BalanceStatement, transactions []Tr
 	for acct, liabLots := range startingBalance.liabilities {
 		statement.liabilities[acct] = append(statement.liabilities[acct], liabLots...)
 	}
-	// add the transactions to the balance statement
+	// group the transaction lots by account
 	for _, t := range transactions {
 		for _, p := range t.Postings {
 			acct := p.Account
@@ -82,27 +80,51 @@ func aggregateLotsPerCode(lots []Lot) []Lot {
 
 func ComputeIncomeStatement(transactions []Transaction) IncomeStatement {
 	statement := IncomeStatement{
-		revenue:  make(map[string]decimal.Decimal),
-		expenses: make(map[string]decimal.Decimal),
+		revenue:  make(map[string][]Lot),
+		expenses: make(map[string][]Lot),
 	}
+	// group the transaction lots by account
 	for _, t := range transactions {
 		for _, p := range t.Postings {
 			if p.Commodity.Type == CURRENCY {
 				if strings.Contains(p.Account, "income") || strings.Contains(p.Account, "revenue") {
-					// income & revenue are negative, as they are debits from external account
-					// so we substract the amount to get positive value
-					statement.revenue[p.Account] = statement.revenue[p.Account].Sub(p.Amount)
+					statement.revenue[p.Account] = append(statement.revenue[p.Account], p.Lot)
 				} else if strings.Contains(p.Account, "expense") {
-					statement.expenses[p.Account] = statement.expenses[p.Account].Add(p.Amount)
+					statement.expenses[p.Account] = append(statement.expenses[p.Account], p.Lot)
 				}
 			}
 		}
 	}
-	for _, rev := range statement.revenue {
-		statement.netIncome = statement.netIncome.Add(rev)
+	// aggregate lots to single value per asset type per account
+	for acct, lots := range statement.revenue {
+		lots = aggregateLotsPerCode(lots)
+		// by convention, revenue is negative, but we need it to
+		// as positive in the statement
+		for i := range lots {
+			lots[i].Amount = lots[i].Amount.Neg()
+		}
+		statement.revenue[acct] = aggregateLotsPerCode(lots)
 	}
-	for _, exp := range statement.expenses {
-		statement.netIncome = statement.netIncome.Sub(exp)
+	for acct, lots := range statement.expenses {
+		statement.expenses[acct] = aggregateLotsPerCode(lots)
+	}
+	// group revenue and expenses by commodity
+	netIncomeByCode := make(map[string]Lot)
+	for _, lots := range statement.revenue {
+		for _, lot := range lots {
+			netIncomeByCode[lot.Commodity.Code] = lot
+		}
+	}
+	for _, lots := range statement.expenses {
+		for _, explot := range lots {
+			lot := netIncomeByCode[explot.Commodity.Code]
+			lot.Amount = lot.Amount.Sub(explot.Amount)
+			netIncomeByCode[lot.Commodity.Code] = lot
+		}
+	}
+	// convert map to slice
+	for _, lot := range netIncomeByCode {
+		statement.netIncome = append(statement.netIncome, lot)
 	}
 	return statement
 }
