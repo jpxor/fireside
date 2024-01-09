@@ -64,17 +64,17 @@ func commodityFromCode(code string) (com Commodity) {
 	return
 }
 
-func findMatchingCurrency(f CommodityFormat) (Commodity, error) {
+func (j Journal) findMatchingCurrency(f CommodityFormat) (Commodity, error) {
 	if f.Prefix == "" && f.Postfix == "" {
-		return DefaultCurrency, nil
+		return j.DefaultCurrency, nil
 	}
-	defaultFmt := currencyFormats[DefaultCurrency.Code]
+	defaultFmt := currencyFormats[j.DefaultCurrency.Code]
 	if strings.TrimSpace(defaultFmt.Prefix) == f.Prefix &&
 		strings.TrimSpace(defaultFmt.Postfix) == f.Postfix {
-		return DefaultCurrency, nil
+		return j.DefaultCurrency, nil
 	}
 	if f.Prefix == "$" {
-		return DefaultCurrency, fmt.Errorf("ambiguous currency format %+v", f)
+		return j.DefaultCurrency, fmt.Errorf("ambiguous currency format %+v", f)
 	}
 	for code, fmt := range currencyFormats {
 		if strings.TrimSpace(fmt.Prefix) == f.Prefix &&
@@ -85,5 +85,5 @@ func findMatchingCurrency(f CommodityFormat) (Commodity, error) {
 			}, nil
 		}
 	}
-	return DefaultCurrency, fmt.Errorf("no currency matching format %+v", f)
+	return j.DefaultCurrency, fmt.Errorf("no currency matching format %+v", f)
 }

@@ -607,6 +607,7 @@ func TestParseValue(t *testing.T) {
 		filename: "TestParsePrice",
 		row:      0,
 		col:      0,
+		journal:  &Journal{DefaultCurrency: DefaultCurrency},
 	}
 
 	for i, test := range cases {
@@ -744,8 +745,12 @@ func TestBalanceTransaction(t *testing.T) {
 
 func TestFindMatchingCurrency(t *testing.T) {
 
+	j := Journal{
+		DefaultCurrency: Commodity{CURRENCY, "USD"},
+	}
+
 	// match in map
-	com, err := findMatchingCurrency(CommodityFormat{Prefix: "£", Postfix: ""})
+	com, err := j.findMatchingCurrency(CommodityFormat{Prefix: "£", Postfix: ""})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -754,8 +759,8 @@ func TestFindMatchingCurrency(t *testing.T) {
 	}
 
 	// dollar matches default
-	DefaultCurrency = Commodity{CURRENCY, "CAD"}
-	com, err = findMatchingCurrency(CommodityFormat{Prefix: "$", Postfix: ""})
+	j.DefaultCurrency = Commodity{CURRENCY, "CAD"}
+	com, err = j.findMatchingCurrency(CommodityFormat{Prefix: "$", Postfix: ""})
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 	}
@@ -764,20 +769,17 @@ func TestFindMatchingCurrency(t *testing.T) {
 	}
 
 	// Ambiguous (dollar does not match default)
-	DefaultCurrency = Commodity{CURRENCY, "GBD"}
-	_, err = findMatchingCurrency(CommodityFormat{Prefix: "$", Postfix: ""})
+	j.DefaultCurrency = Commodity{CURRENCY, "GBD"}
+	_, err = j.findMatchingCurrency(CommodityFormat{Prefix: "$", Postfix: ""})
 	if err == nil {
 		t.Errorf("Expected ambiguous error, got: %v", err)
 	}
 
 	// No match
-	_, err = findMatchingCurrency(CommodityFormat{Prefix: "££", Postfix: ""})
+	_, err = j.findMatchingCurrency(CommodityFormat{Prefix: "££", Postfix: ""})
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
-
-	// reset default currency
-	DefaultCurrency = Commodity{CURRENCY, "USD"}
 }
 
 func TestErrJournal(t *testing.T) {

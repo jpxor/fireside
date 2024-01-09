@@ -20,6 +20,7 @@ const START_OF_COMMENT byte = ';'
 // file being scanned (helps write nice parse errors)
 type Scanner struct {
 	*bufio.Scanner
+	journal  *Journal
 	filename string
 	row      int
 	col      int
@@ -410,7 +411,7 @@ func (s *Scanner) ParseCommodity(tok []byte) (amount decimal.Decimal, com Commod
 	format.Postfix, com.Code, tail = s.ParsePostfix(tail)
 
 	if com.Code == "" {
-		com, err = findMatchingCurrency(format)
+		com, err = s.journal.findMatchingCurrency(format)
 		if err != nil {
 			return
 		}
@@ -459,7 +460,7 @@ func (s *Scanner) ParseValue(count decimal.Decimal, tok []byte) (value Value, ta
 	format.Postfix, value.Code, tail = s.ParsePostfix(tail)
 
 	if value.Code == "" {
-		value.Commodity, err = findMatchingCurrency(format)
+		value.Commodity, err = s.journal.findMatchingCurrency(format)
 		if err != nil {
 			return
 		}

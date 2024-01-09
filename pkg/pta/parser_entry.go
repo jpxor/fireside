@@ -36,20 +36,21 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 	}
 	defer file.Close()
 
-	s := Scanner{
-		filename: filepath,
-		Scanner:  bufio.NewScanner(file),
-	}
-
 	errs := ParseErrors{}
 	transactions := []Transaction{}
 
 	journal := Journal{
-		Filepath:        s.filename,
+		Filepath:        filepath,
 		Decimal:         DefaultNumberFormat.Decimal,
 		DefaultCurrency: DefaultCurrency,
 		Alias:           make(map[string]string),
 		Includes:        make([]Journal, 0),
+	}
+
+	s := Scanner{
+		filename: filepath,
+		journal:  &journal,
+		Scanner:  bufio.NewScanner(file),
 	}
 
 	for s.Scan() {
