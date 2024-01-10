@@ -102,6 +102,30 @@ func ParseJournal(filepath string) (Journal, []Transaction, error) {
 	return journal, transactions, errs.get()
 }
 
+func (j *Journal) ParseTransactionStrings(txString string) (txs []Transaction, err error) {
+	errs := ParseErrors{}
+	s := Scanner{
+		filename: "",
+		journal:  j,
+		Scanner:  bufio.NewScanner(strings.NewReader(txString)),
+	}
+	for s.Scan() {
+		line, empty, _ := tidy(s.Bytes())
+		if empty {
+			continue
+		}
+		tx, err := s.ParseTransaction(line)
+		if err == nil {
+			txs = append(txs, tx)
+			continue
+		} else if err != ErrNoMatch {
+			errs.add(err)
+			continue
+		}
+	}
+	return txs, errs.get()
+}
+
 func (s *Scanner) ParseTransaction(line []byte) (tx Transaction, err error) {
 	var tail []byte
 	var date time.Time

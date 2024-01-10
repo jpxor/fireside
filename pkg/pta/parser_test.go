@@ -656,6 +656,33 @@ func TestParseValue(t *testing.T) {
 	}
 }
 
+func TestParseTransactionStrings(t *testing.T) {
+	// sanity check
+	testString := `
+2024-01-09 Test transaction
+	toaccount 100
+	fromaccount
+
+2024-01-09 Test transaction
+	toaccount $100
+	fromaccount
+
+2024-01-09 Test transaction
+	toaccount $100 USD
+	fromaccount
+`
+	j := Journal{
+		DefaultCurrency: DefaultCurrency,
+	}
+	txs, err := j.ParseTransactionStrings(testString)
+	if err != nil {
+		t.Errorf("failed to parse transactions: %s", err)
+	}
+	if len(txs) != 3 {
+		t.Errorf("failed to parse transactions: len != 3")
+	}
+}
+
 func TestFastNewDecimal(t *testing.T) {
 
 	type Case struct {
