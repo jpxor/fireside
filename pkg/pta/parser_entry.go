@@ -123,6 +123,18 @@ func (j *Journal) ParseTransactionStrings(txString string) (txs []Transaction, e
 			continue
 		}
 	}
+	err = s.Err()
+	if err != nil {
+		errs.add(err)
+	}
+
+	for i := 0; i < len(txs); i++ {
+		err := balanceTransaction(&txs[i])
+		if err != nil {
+			errs.add(err)
+		}
+	}
+
 	return txs, errs.get()
 }
 

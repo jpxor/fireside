@@ -660,15 +660,15 @@ func TestParseTransactionStrings(t *testing.T) {
 	// sanity check
 	testString := `
 2024-01-09 Test transaction
-	toaccount 100
+	toaccount  100
 	fromaccount
 
 2024-01-09 Test transaction
-	toaccount $100
+	toaccount  $100
 	fromaccount
 
 2024-01-09 Test transaction
-	toaccount $100 USD
+	toaccount  $100 USD
 	fromaccount
 `
 	j := Journal{
@@ -680,6 +680,11 @@ func TestParseTransactionStrings(t *testing.T) {
 	}
 	if len(txs) != 3 {
 		t.Errorf("failed to parse transactions: len != 3")
+	}
+	for _, tx := range txs {
+		if !tx.Postings[0].Amount.Equal(tx.Postings[1].Amount.Neg()) {
+			t.Errorf("failed: transaction not balanced")
+		}
 	}
 }
 
