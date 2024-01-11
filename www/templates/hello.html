@@ -1,0 +1,14 @@
+<style>
+    div.my-component {
+        background-color: aliceblue;
+        min-width: 10px;
+        min-height: 10px;
+    }
+</style>
+<div class="my-component">
+    {{if .Name}}
+    Hello {{.Name}}
+    {{else}}
+    Hello.
+    {{end}}
+</div>
