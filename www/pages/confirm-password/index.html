@@ -29,18 +29,16 @@
 <body class="login-page">
     <section>
         <h1>fireside</h1>
+        <h4>sign up</h4>
         <form>
-            <label for="email">Email</label>
-            <input name="email" id="email" type="email" autocomplete="email" required />
+            <label for="name">What's your name?</label>
+            <input name="name" id="name" type="text" autocomplete="given-name" required />
 
-            <label for="password">Password</label>
+            <label for="password">Confirm Password</label>
             <input type="password" id="password" name="password" autocomplete="current-password" required />
 
-            <button class="accent" type="submit" hx-post="/api/user/login" hx-target="#errMsg">
+            <button class="accent" type="submit" hx-post="/api/user/verify" hx-target="#errMsg">
                 Login</button>
-
-            <button type="submit" hx-post="/api/user/create" hx-target="#errMsg">
-                Create Account</button>
 
             <p id="errMsg"></p>
         </form>

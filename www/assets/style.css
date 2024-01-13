@@ -35,10 +35,20 @@ body.login-page {
         font-size: xx-large;
     }
 
+    h4 {
+        padding-bottom: 1.75em;
+        color: var(--accent-dark-color);
+    }
+
     form {
         display: flex;
         flex-direction: column;
         text-align: start;
+
+        p {
+            color: darkred;
+            font-weight: 500;
+        }
     }
 
     label {

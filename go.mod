@@ -6,6 +6,7 @@ require (
 	github.com/cockroachdb/apd v1.1.0
 	github.com/gofiber/fiber/v2 v2.51.0
 	github.com/gofiber/template/html/v2 v2.0.5
+	github.com/rs/xid v1.5.0
 	github.com/shopspring/decimal v1.3.1
 )
 
@@ -24,5 +25,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.50.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/crypto v0.18.0
+	golang.org/x/sys v0.16.0 // indirect
 )

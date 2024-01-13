@@ -39,17 +39,21 @@ func main() {
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
 	}))
+	app.Use(handlers.ResetLoginExpirationMiddleware())
 
 	if *devel {
 		// prevent browser from caching replies
 		app.Use(handlers.SetNoCacheHeaders)
+		app.Get("/debug/users", handlers.DebugListUsers)
 	}
 
 	tmpl := app.Group("/render/")
 	tmpl.Get("hello", handlers.RenderHello)
 
 	api := app.Group("/api/")
-	api.Get("name", handlers.GetName)
+	api.Post("user/create", handlers.UserCreate)
+	api.Post("user/verify", handlers.UserVerify)
+	api.Post("user/login", handlers.UserLogin)
 
 	app.Static("/assets/", "./www/assets/")
 	app.Static("/", "./www/pages/")
