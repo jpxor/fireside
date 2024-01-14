@@ -10,6 +10,10 @@
     margin: 0;
 }
 
+.errMsg {
+    color: rgb(106, 0, 0);
+}
+
 /* LOGIN PAGE */
 body.login-page {
     background-color: var(--accent-color);
@@ -89,5 +93,99 @@ body.login-page {
     button.accent:hover {
         background-color: #1a86c0;
         font-weight: 600;
+    }
+}
+
+/* DASHBOARD */
+body.dashboard-page {
+    background-color: var(--accent-color);
+    background-image: linear-gradient(315deg, var(--accent-color) 0%, #80D0C7 100%);
+    min-height: 100vh;
+    padding: 2em;
+    display: flex;
+    flex-direction: column;
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: 400;
+
+    article {
+        width: 100%;
+        min-height: 100px;
+        border-radius: 0.6em;
+        background-color: #fcfcfc;
+        padding: 2em;
+
+    }
+}
+
+div.collapsible-component {
+    header {
+        background-color: #d9e2eb;
+        color: #252525;
+        cursor: pointer;
+        padding: 1.25em;
+        transition: 0.4s;
+        display: flex;
+        align-items: center;
+        border-radius: 8px;
+        z-index: 1;
+    }
+
+    header:hover {
+        background-color: #c1d1e0;
+    }
+
+    .panel {
+        position: relative;
+        top: -8px;
+        padding: 1em;
+        overflow: hidden;
+        border-radius: 0 0 8px 8px;
+        background-color: #e9e7e7;
+    }
+}
+
+div.file-selector {
+    .pathcrumbs {
+        padding: 0.25em;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        border-radius: 3px;
+        background-color: rgb(234, 237, 239);
+    }
+
+    div.dirnav {
+        display: flex;
+        gap: 1em;
+        padding: 0.5em;
+    }
+
+    ul.dirnav {
+        display: flex;
+        gap: 0.5em;
+        flex-wrap: wrap;
+        list-style: none;
+        padding: 2em;
+    }
+
+    ul.dirnav li {
+        flex-grow: 1;
+        flex-shrink: 0;
+        border: 1px solid rgba(0, 0, 0, 0.25);
+        border-radius: 3px;
+        margin: 0;
+        background-color: rgb(234, 237, 239);
+        max-width: 20em;
+    }
+
+    ul.dirnav li :hover {
+        background-color: rgb(211, 221, 227);
+    }
+
+    ul.dirnav li>div {
+        padding: 1em;
+        cursor: pointer;
+    }
+
+    ul.dirnav li>div.selected {
+        background-color: rgba(0, 136, 255, 0.257);
     }
 }

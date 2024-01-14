@@ -1,0 +1,60 @@
+<div class="collapsible-component">
+  <header onclick="toggleDisplay(this.nextElementSibling)">
+    <div style="flex-grow: 1;">
+      <h2 style="margin-bottom: 0.25em;">Files</h2>
+      {{if eq (len .SelectedFile) 0}}
+      Journal: None selected
+      {{else}}
+      Journal: {{.SelectedFile}}
+      {{end}}
+    </div>
+    {{if eq (len .SelectedFile) 0}}
+    <button style="flex-shrink: 0;">Select File</button>
+    {{else}}
+    <div class="dirnav">
+      <button style="flex-shrink: 0;">Selected ✓</button>
+      <button style="flex-shrink: 0;">Delete File</button>
+    </div>
+    {{end}}
+  </header>
+
+  <div class="file-selector panel">
+    <p class="pathcrumbs">🗁
+      {{range .PathCrumbs}}
+      / <a href="cd {{.Path}}/{{.Name}}" hx-get="/render/file-selector/{{.Path}}" hx-target="#file-selector">{{.Name}}</a>
+      {{end}}</p>
+
+    {{if .Error}}
+    <p class="errMsg">Error: {{.Error}}</p>
+    (<a href="nav:root" hx-get="/render/file-selector" hx-target="#file-selector">back to root directory</a>)
+    {{else}}
+    {{if eq (len .DirEnts) 0}}
+    There's nothing here! <br> Create a new journal or folder
+    {{else}}
+    <ul class="dirnav">
+      {{range .DirEnts}}
+      <li>
+        {{if .IsDir}}
+        <div hx-get="/render/file-selector/{{$.Path}}/{{.Name}}" hx-target="#file-selector">🗀 {{.Name}}</div>
+        {{else}}
+        <div hx-post="/api/file-selector/select/{{$.Path}}" hx-vals='{"name": "{{$.Path}}/{{.Name}}"}'
+          hx-target="#file-selector" {{if eq $.SelectedFile (printf "%s/%s" $.Path .Name) }} class="selected" {{end}}>
+          🗎 {{.Name}}
+        </div>
+        {{end}}
+      </li>
+      {{end}}
+    </ul>
+    {{end}}
+    <hr>
+    <form hx-post="/api/file-selector/new/{{$.Path}}" hx-target="#file-selector">
+      <div class="dirnav" style="display: flex; align-items: center;">
+        <label for="name">Filename:</label>
+        <input style="flex-grow: 1;" type="text" id="name" name="name" required>
+        <button type="submit" name="type" value="journal">Create Journal</button>
+        <button type="submit" name="type" value="folder">Create Folder</button>
+      </div>
+    </form>
+    {{end}}
+  </div>
+</div>

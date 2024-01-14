@@ -1,1 +1,56 @@
-DASHBOARD PAGE
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>fireside dashboard</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="https://unpkg.com/htmx.org@latest" defer></script>
+    <link rel="stylesheet" href="/assets/style.css" defer>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Courgette&family=Noto+Sans:ital,wght@0,200;0,400;0,600;0,700;1,400"
+        rel="stylesheet" defer>
+
+    <script>
+        document.addEventListener('htmx:configRequest', function (event) {
+            var form = event.target.closest('form');
+            if (form && !form.checkValidity()) {
+                event.preventDefault();
+                form.reportValidity();
+            }
+        });
+    </script>
+</head>
+
+<body class="dashboard-page">
+
+    <article>
+        <h1>fireside</h1>
+
+        <section id="file-selector" hx-get="/render/file-selector" hx-trigger="load">
+        </section>
+
+        <section id="add-expenses" hx-get="/render/add-expenses" hx-trigger="load">
+        </section>
+
+        <section id="recent-tx" hx-get="/render/recent-tx" hx-trigger="load">
+        </section>
+
+        <script>
+            function toggleDisplay(elm) {
+                if (elm.style.display === "block" || elm.style.display === "") {
+                    elm.style.display = "none";
+                } else {
+                    elm.style.display = "block";
+                }
+            }
+        </script>
+
+</article>
+</body>
+
+</html>

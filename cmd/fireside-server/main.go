@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fireside/app"
 	"fireside/app/db"
 	"fireside/cmd/fireside-server/handlers"
 	"flag"
@@ -26,6 +27,9 @@ func main() {
 
 	userdbPath := filepath.Join(*wdir, "users.db")
 	db.InitUserDB(userdbPath)
+
+	userDataPath := filepath.Join(*wdir, "user_data")
+	app.InitUserFilesRootDir(userDataPath)
 
 	tmplEngine := html.New("./www/templates", "")
 	if *devel {
@@ -53,12 +57,14 @@ func main() {
 	}
 
 	tmpl := app.Group("/render/")
-	tmpl.Get("hello", handlers.RenderHello)
+	tmpl.Get("file-selector/*", handlers.RenderFileSelector)
 
 	api := app.Group("/api/")
 	api.Post("user/create", handlers.UserCreate)
 	api.Post("user/verify", handlers.UserVerify)
 	api.Post("user/login", handlers.UserLogin)
+	api.Post("file-selector/new/*", handlers.FileSelectorNew)
+	api.Post("file-selector/select/*", handlers.FileSelectorSelect)
 
 	app.Static("/assets/", "./www/assets/")
 	app.Static("/", "./www/pages/")

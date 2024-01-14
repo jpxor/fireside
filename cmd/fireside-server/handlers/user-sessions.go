@@ -21,8 +21,9 @@ type userFormData struct {
 }
 
 type sessCookieData struct {
-	Email string
-	ID    string
+	SelectedFile string
+	Email        string
+	ID           string
 }
 
 func UserCreate(c *fiber.Ctx) error {
@@ -74,11 +75,13 @@ func UserVerify(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).SendString("server error: try again")
 	}
 
-	cookie, err := newSessionCookie(user.Email, uid)
+	err = newSessionCookie(c, user.Email, uid)
 	if err != nil {
-		return c.Status(fiber.StatusOK).SendString("server error: try again")
+		// error creating session, but user is successfully verified,
+		// redirect them to login
+		c.Set("HX-Redirect", "/login")
+		return c.SendStatus(fiber.StatusOK)
 	}
-	c.Cookie(cookie)
 
 	c.Set("HX-Redirect", "/dashboard")
 	return c.SendStatus(fiber.StatusOK)
@@ -96,11 +99,10 @@ func UserLogin(c *fiber.Ctx) error {
 	}
 	user, _ := db.GetUser(data.Email)
 
-	cookie, err := newSessionCookie(user.Email, user.ID)
+	err = newSessionCookie(c, user.Email, user.ID)
 	if err != nil {
 		return c.Status(fiber.StatusOK).SendString("server error: try again")
 	}
-	c.Cookie(cookie)
 
 	c.Set("HX-Redirect", "/dashboard")
 	return c.SendStatus(fiber.StatusOK)
@@ -135,24 +137,41 @@ func newUnverifiedCookie(uid string) *fiber.Cookie {
 	return cookie
 }
 
-func newSessionCookie(email, id string) (*fiber.Cookie, error) {
+func newSessionCookie(c *fiber.Ctx, email, id string) error {
 	buf, err := json.Marshal(sessCookieData{
-		email, id,
+		Email: email,
+		ID:    id,
 	})
 	if err != nil {
 		log.Println("newSessionCookie:", err)
-		return nil, err
+		return err
 	}
 	cookie := new(fiber.Cookie)
 	cookie.Name = "session"
 	cookie.Value = string(buf)
 	cookie.Expires = time.Now().Add(24 * time.Hour)
 	cookie.HTTPOnly = true
-	return cookie, nil
+	c.Cookie(cookie)
+	return nil
 }
 
-func parseSessionCookie(val string) (sess *sessCookieData, err error) {
-	err = json.Unmarshal([]byte(val), sess)
+func updateSessionCookie(c *fiber.Ctx, sess sessCookieData) error {
+	buf, err := json.Marshal(sess)
+	if err != nil {
+		log.Println("updateSessionCookie:", err)
+		return err
+	}
+	cookie := new(fiber.Cookie)
+	cookie.Name = "session"
+	cookie.Value = string(buf)
+	cookie.Expires = time.Now().Add(24 * time.Hour)
+	cookie.HTTPOnly = true
+	c.Cookie(cookie)
+	return nil
+}
+
+func parseSessionCookie(val string) (sess sessCookieData, err error) {
+	err = json.Unmarshal([]byte(val), &sess)
 	if err != nil {
 		log.Printf("parseSessionCookie(%s): %s\r\n", val, err)
 	}
