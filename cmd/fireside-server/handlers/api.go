@@ -61,9 +61,9 @@ func UserVerify(c *fiber.Ctx) error {
 	user, ok := db.GetUnverifiedUser(uid)
 
 	if !ok {
-		return c.Status(fiber.StatusOK).SendString("verification timedout - please try creating a new account")
+		return c.Status(fiber.StatusOK).SendString("verification timed out - please try creating a new account")
 	}
-	if !user.CheckPassword([]byte(data.Passw)) {
+	if !db.CheckPassword(user, data.Passw) {
 		return c.Status(fiber.StatusOK).SendString("passwords don't match")
 	}
 
@@ -91,10 +91,10 @@ func UserLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusOK).SendString("bad request: failed to parse form data")
 	}
 
-	user, _ := db.GetUser(data.Email)
-	if !user.CheckPassword([]byte(data.Passw)) {
+	if !db.CheckPassword(db.User{Email: data.Email}, data.Passw) {
 		return c.Status(fiber.StatusOK).SendString("bad email or password")
 	}
+	user, _ := db.GetUser(data.Email)
 
 	cookie := new(fiber.Cookie)
 	cookie.Name = "uid"

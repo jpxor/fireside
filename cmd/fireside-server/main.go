@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fireside/app/db"
 	"fireside/cmd/fireside-server/handlers"
 	"flag"
 	"log"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -14,13 +16,16 @@ import (
 )
 
 var (
-	port = flag.String("port", "3000", "Port to listen on")
-	// wdir  = flag.String("wdir", ".", "Working directory")
+	port  = flag.String("port", "3000", "Port to listen on")
+	wdir  = flag.String("wdir", ".", "Working directory")
 	devel = flag.Bool("devel", false, "Development mode")
 )
 
 func main() {
 	flag.Parse()
+
+	userdbPath := filepath.Join(*wdir, "users.db")
+	db.InitUserDB(userdbPath)
 
 	tmplEngine := html.New("./www/templates", "")
 	if *devel {

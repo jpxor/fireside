@@ -8,6 +8,7 @@ require (
 	github.com/gofiber/template/html/v2 v2.0.5
 	github.com/rs/xid v1.5.0
 	github.com/shopspring/decimal v1.3.1
+	go.etcd.io/bbolt v1.3.8
 )
 
 require (

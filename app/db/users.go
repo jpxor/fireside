@@ -3,10 +3,12 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 	"time"
 
 	"github.com/rs/xid"
+	bolt "go.etcd.io/bbolt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,25 +24,61 @@ type UserMap struct {
 	sync.Mutex
 }
 
-var (
-	users = UserMap{
-		kv: make(map[string]User),
-	}
-	unverifiedUsers = UserMap{
-		kv: make(map[string]User),
-	}
-	userMutex sync.Mutex
-)
+var userdb *bolt.DB
+var userMutex sync.Mutex
+var unverifiedUsers = UserMap{
+	kv: make(map[string]User),
+}
 
-func (u User) CheckPassword(passw []byte) bool {
-	return bcrypt.CompareHashAndPassword(u.hash, passw) == nil
+func InitUserDB(path string) {
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	db.Update(func(tx *bolt.Tx) (err error) {
+		_, err = tx.CreateBucketIfNotExists([]byte("users"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte("hashes"))
+		if err != nil {
+			log.Fatal(err)
+		}
+		return
+	})
+	userdb = db
 }
 
 func GetUser(email string) (user User, ok bool) {
-	userMutex.Lock()
-	defer userMutex.Unlock()
-	user, ok = users.kv[email]
+	userdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("users"))
+		v := b.Get([]byte(email))
+		if len(v) == 0 {
+			return nil
+		}
+		err := json.Unmarshal(v, &user)
+		if err != nil {
+			log.Printf("GetUser:Unmarshal(%s): %s\r\n", string(v), err)
+			return err
+		}
+		ok = true
+		return nil
+	})
 	return
+}
+
+func CheckPassword(user User, passw string) bool {
+	// when verifying user password, we have an unverified
+	// user with hash (user not in db yet), but during
+	// login we need to get the hash from the db
+	if len(user.hash) == 0 {
+		userdb.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("hashes"))
+			user.hash = b.Get([]byte(user.Email))
+			return nil
+		})
+	}
+	return bcrypt.CompareHashAndPassword(user.hash, []byte(passw)) == nil
 }
 
 func GetUnverifiedUser(uid string) (user User, ok bool) {
@@ -51,26 +89,41 @@ func GetUnverifiedUser(uid string) (user User, ok bool) {
 }
 
 func UserEmailExists(email string) bool {
-	userMutex.Lock()
-	defer userMutex.Unlock()
-	_, exists := users.kv[email]
-	return exists
+	_, ok := GetUser(email)
+	return ok
 }
 
 func SaveUser(user User) error {
-	userMutex.Lock()
-	defer userMutex.Unlock()
-	users.kv[user.Email] = user
-	delete(unverifiedUsers.kv, user.ID)
-	return nil
+	err := userdb.Update(func(tx *bolt.Tx) error {
+		v, err := json.Marshal(user)
+		if err != nil {
+			return err
+		}
+		b := tx.Bucket([]byte("users"))
+		err = b.Put([]byte(user.Email), v)
+		if err != nil {
+			return err
+		}
+		b = tx.Bucket([]byte("hashes"))
+		err = b.Put([]byte(user.Email), user.hash)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err == nil {
+		userMutex.Lock()
+		defer userMutex.Unlock()
+		delete(unverifiedUsers.kv, user.ID)
+	}
+	return err
 }
 
 func SaveUnverifiedUser(email string, hash []byte) (string, error) {
 	userMutex.Lock()
 	defer userMutex.Unlock()
 
-	_, exists := users.kv[email]
-	if exists {
+	if UserEmailExists(email) {
 		return "", fmt.Errorf("email already in use")
 	}
 	user := User{
@@ -80,7 +133,7 @@ func SaveUnverifiedUser(email string, hash []byte) (string, error) {
 	}
 	unverifiedUsers.kv[user.ID] = user
 
-	// launch a go routine that will clear the unvalidated user
+	// launch a go routine that will clear the unverified user
 	// after ~10 minutes (for low volume)
 	go func() {
 		time.Sleep(10 * time.Minute)
@@ -95,7 +148,24 @@ func SaveUnverifiedUser(email string, hash []byte) (string, error) {
 func DebugListUsers() string {
 	userMutex.Lock()
 	defer userMutex.Unlock()
-	jstr0, _ := json.MarshalIndent(users.kv, "", "    ")
+
+	users := make(map[string]User)
+	userdb.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("users"))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var u User
+			err := json.Unmarshal(v, &u)
+			if err != nil {
+				log.Printf("DebugListUsers:Unmarshal(%s): %s\r\n", string(v), err)
+				continue
+			}
+			users[u.Email] = u
+		}
+		return nil
+	})
+
+	jstr0, _ := json.MarshalIndent(users, "", "    ")
 	jstr1, _ := json.MarshalIndent(unverifiedUsers.kv, "", "    ")
 	return fmt.Sprintf("verified\r\n%s\r\n\nunverified\r\n%s\r\n", jstr0, jstr1)
 
