@@ -12,8 +12,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-var name = "World"
-
 type userFormData struct {
 	Name  string `form:"name"`
 	Email string `form:"email"`
