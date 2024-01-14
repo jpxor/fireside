@@ -25,7 +25,6 @@ type UserMap struct {
 }
 
 var userdb *bolt.DB
-var userMutex sync.Mutex
 var unverifiedUsers = UserMap{
 	kv: make(map[string]User),
 }
@@ -82,8 +81,8 @@ func CheckPassword(user User, passw string) bool {
 }
 
 func GetUnverifiedUser(uid string) (user User, ok bool) {
-	userMutex.Lock()
-	defer userMutex.Unlock()
+	unverifiedUsers.Lock()
+	defer unverifiedUsers.Unlock()
 	user, ok = unverifiedUsers.kv[uid]
 	return
 }
@@ -112,16 +111,16 @@ func SaveUser(user User) error {
 		return nil
 	})
 	if err == nil {
-		userMutex.Lock()
-		defer userMutex.Unlock()
+		unverifiedUsers.Lock()
+		defer unverifiedUsers.Unlock()
 		delete(unverifiedUsers.kv, user.ID)
 	}
 	return err
 }
 
 func SaveUnverifiedUser(email string, hash []byte) (string, error) {
-	userMutex.Lock()
-	defer userMutex.Unlock()
+	unverifiedUsers.Lock()
+	defer unverifiedUsers.Unlock()
 
 	if UserEmailExists(email) {
 		return "", fmt.Errorf("email already in use")
@@ -137,8 +136,8 @@ func SaveUnverifiedUser(email string, hash []byte) (string, error) {
 	// after ~10 minutes (for low volume)
 	go func() {
 		time.Sleep(10 * time.Minute)
-		userMutex.Lock()
-		defer userMutex.Unlock()
+		unverifiedUsers.Lock()
+		defer unverifiedUsers.Unlock()
 		delete(unverifiedUsers.kv, user.ID)
 	}()
 
@@ -146,8 +145,8 @@ func SaveUnverifiedUser(email string, hash []byte) (string, error) {
 }
 
 func DebugListUsers() string {
-	userMutex.Lock()
-	defer userMutex.Unlock()
+	unverifiedUsers.Lock()
+	defer unverifiedUsers.Unlock()
 
 	users := make(map[string]User)
 	userdb.View(func(tx *bolt.Tx) error {
