@@ -66,32 +66,6 @@ func GetUser(email string) (user User, ok bool) {
 	return
 }
 
-func CheckPassword(user User, passw string) bool {
-	// when verifying user password, we have an unverified
-	// user with hash (user not in db yet), but during
-	// login we need to get the hash from the db
-	if len(user.hash) == 0 {
-		userdb.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte("hashes"))
-			user.hash = b.Get([]byte(user.Email))
-			return nil
-		})
-	}
-	return bcrypt.CompareHashAndPassword(user.hash, []byte(passw)) == nil
-}
-
-func GetUnverifiedUser(uid string) (user User, ok bool) {
-	unverifiedUsers.Lock()
-	defer unverifiedUsers.Unlock()
-	user, ok = unverifiedUsers.kv[uid]
-	return
-}
-
-func UserEmailExists(email string) bool {
-	_, ok := GetUser(email)
-	return ok
-}
-
 func SaveUser(user User) error {
 	err := userdb.Update(func(tx *bolt.Tx) error {
 		v, err := json.Marshal(user)
@@ -116,6 +90,32 @@ func SaveUser(user User) error {
 		delete(unverifiedUsers.kv, user.ID)
 	}
 	return err
+}
+
+func UserEmailExists(email string) bool {
+	_, ok := GetUser(email)
+	return ok
+}
+
+func CheckPassword(user User, passw string) bool {
+	// when verifying user password, we have an unverified
+	// user with hash (user not in db yet), but during
+	// login we need to get the hash from the db
+	if len(user.hash) == 0 {
+		userdb.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte("hashes"))
+			user.hash = b.Get([]byte(user.Email))
+			return nil
+		})
+	}
+	return bcrypt.CompareHashAndPassword(user.hash, []byte(passw)) == nil
+}
+
+func GetUnverifiedUser(uid string) (user User, ok bool) {
+	unverifiedUsers.Lock()
+	defer unverifiedUsers.Unlock()
+	user, ok = unverifiedUsers.kv[uid]
+	return
 }
 
 func SaveUnverifiedUser(email string, hash []byte) (string, error) {
@@ -167,5 +167,4 @@ func DebugListUsers() string {
 	jstr0, _ := json.MarshalIndent(users, "", "    ")
 	jstr1, _ := json.MarshalIndent(unverifiedUsers.kv, "", "    ")
 	return fmt.Sprintf("verified\r\n%s\r\n\nunverified\r\n%s\r\n", jstr0, jstr1)
-
 }
