@@ -58,6 +58,7 @@ func main() {
 
 	tmpl := app.Group("/render/")
 	tmpl.Get("file-selector/*", handlers.RenderFileSelector)
+	tmpl.Get("add-expenses", handlers.RenderAddExpenses)
 
 	api := app.Group("/api/")
 	api.Post("user/create", handlers.UserCreate)
@@ -65,6 +66,7 @@ func main() {
 	api.Post("user/login", handlers.UserLogin)
 	api.Post("file-selector/new/*", handlers.FileSelectorNew)
 	api.Post("file-selector/select/*", handlers.FileSelectorSelect)
+	api.Post("add-expenses", handlers.PostAddExpenses)
 
 	app.Static("/assets/", "./www/assets/")
 	app.Static("/", "./www/pages/")

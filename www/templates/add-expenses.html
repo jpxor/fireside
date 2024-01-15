@@ -1,0 +1,98 @@
+<div class="collapsible-component">
+  <header onclick="toggleDisplay(this.nextElementSibling)">
+    <h2>Add Expenses</h2>
+  </header>
+
+  <div class="panel">
+
+    <form class="addexp" hx-post="/api/add-expenses" hx-target="#add-expenses">
+      <div style="display: flex; flex-direction: column; margin-bottom: 1em;">
+        <label style="margin-bottom: 0.35em;">From Account</label>
+        <input name="fromacct" style="margin-bottom: 1em;" type="text" list="accounts" required>
+      </div>
+      <div class="addexpgrid">
+
+        <label for="date">Date</label>
+        <label for="expcat">Category</label>
+        <label for="amount">Amount</label>
+        <label for="desc">Description and #Tags</label>
+        <label></label>
+
+        <input name="date" type="date" value="today" required>
+        <input name="expcat" type="text" list="categories" required>
+        <input name="amount" type="text" placeholder="$" required>
+        <input name="desc" type="text" placeholder="(code) description #tags">
+        <span title="copy & insert row" onclick="addexp_insertRow(this)">⮐</span>
+
+      </div>
+      <hr style="margin-block: 1em;">
+      <input style="float: right; margin-right: 3em; padding: 0.4em 1em;" type="submit" />
+    </form>
+
+  </div>
+</div>
+
+<style>
+  form.addexp {
+    label {
+      font-weight: 800;
+    }
+
+    input {
+      padding-block: 0.4em;
+    }
+  }
+
+  div.addexpgrid {
+    gap: 0.5em;
+    display: grid;
+    grid-template-columns: min-content 0.4fr min-content 0.6fr min-content;
+
+    span {
+      padding: 0.25em 0.5em;
+      border-radius: 0.5em;
+    }
+
+    span:hover {
+      background-color: rgba(100, 148, 237, 0.449);
+      cursor: pointer;
+    }
+  }
+</style>
+
+<script>
+  function addexp_insertRow(el) {
+    const desc = el.previousElementSibling;
+    const amount = desc.previousElementSibling;
+    const category = amount.previousElementSibling;
+    const date = category.previousElementSibling;
+
+    const newdesc = document.createElement("input");
+    newdesc.type = "text";
+    newdesc.name = "desc";
+
+    const newamount = document.createElement("input");
+    newamount.type = "number"
+    newamount.name = "amount";
+
+    el.after(el.cloneNode(true));
+    el.after(newdesc);
+    el.after(newamount);
+    el.after(category.cloneNode(true));
+    el.after(date.cloneNode(true));
+  }
+</script>
+
+<datalist id="categories">
+  <option value="Home">
+  <option value="Food">
+  <option value="Transportation">
+  <option value="Entertainment">
+</datalist>
+
+<datalist id="accounts">
+  <option value="assets:tangerine:checking">
+  <option value="assets:tangerine:savings">
+  <option value="liabilities:tangerine:mastercard">
+  <option value="liabilities:bmo:mastercard">
+</datalist>

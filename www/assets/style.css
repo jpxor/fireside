@@ -104,6 +104,7 @@ body.dashboard-page {
     padding: 2em;
     display: flex;
     flex-direction: column;
+    gap: 2em;
     font-family: 'Noto Sans', sans-serif;
     font-weight: 400;
 
@@ -113,7 +114,16 @@ body.dashboard-page {
         border-radius: 0.6em;
         background-color: #fcfcfc;
         padding: 2em;
+        display: flex;
+        flex-direction: column;
+        gap: 2em;
+    }
 
+    h1 {
+        color: var(--accent-dark-color);
+        font-family: 'Courgette', cursive;
+        font-size: xx-large;
+        margin: 0 auto;
     }
 }
 
