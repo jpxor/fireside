@@ -59,6 +59,7 @@ func main() {
 	tmpl := app.Group("/render/")
 	tmpl.Get("file-selector/*", handlers.RenderFileSelector)
 	tmpl.Get("add-expenses", handlers.RenderAddExpenses)
+	tmpl.Get("recent-tx", handlers.RenderRecentTransactions)
 
 	api := app.Group("/api/")
 	api.Post("user/create", handlers.UserCreate)

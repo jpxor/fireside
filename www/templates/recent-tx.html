@@ -1,0 +1,17 @@
+<div class="collapsible-component" id="recent-tx" hx-swap-oob="true">
+  <header onclick="toggleDisplay(this.nextElementSibling)">
+    <h2>Recent transactions</h2>
+  </header>
+
+  <div class="panel">
+    {{if .Transactions}}
+    {{range .Transactions}}
+    <pre>
+{{.}}
+</pre>
+    {{end}}
+    {{else}}
+    <p>No recent transactions.</p>
+    {{end}}
+  </div>
+</div>
