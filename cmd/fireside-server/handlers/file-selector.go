@@ -16,11 +16,12 @@ type pathCrumbs struct {
 }
 
 type fileSelectorRenderData struct {
-	Path         string
-	SelectedFile string
-	PathCrumbs   []pathCrumbs
-	DirEnts      []fs.DirEntry
-	Error        error
+	Path           string
+	SelectedFile   string
+	PathCrumbs     []pathCrumbs
+	DirEnts        []fs.DirEntry
+	ReloadRecentTx bool
+	Error          error
 }
 
 func RenderFileSelector(c *fiber.Ctx) error {
@@ -54,9 +55,10 @@ func RenderFileSelectorWithSession(c *fiber.Ctx, sess sessCookieData) error {
 	}
 	dirPath := path.Clean(c.Params("*"))
 	data := fileSelectorRenderData{
-		Path:         dirPath,
-		PathCrumbs:   makeCrumbs(dirPath),
-		SelectedFile: sess.SelectedFile,
+		Path:           dirPath,
+		PathCrumbs:     makeCrumbs(dirPath),
+		SelectedFile:   sess.SelectedFile,
+		ReloadRecentTx: c.Locals("ReloadRecentTx") == true,
 	}
 	dirents, err := app.DirectoryListing(sess.ID, dirPath)
 	if err != nil {
@@ -138,5 +140,6 @@ func FileSelectorSelect(c *fiber.Ctx) error {
 		}
 		return c.Render("file-selector.html", data)
 	}
+	c.Locals("ReloadRecentTx", true)
 	return RenderFileSelectorWithSession(c, sess)
 }

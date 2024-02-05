@@ -12,7 +12,10 @@ import (
 )
 
 func RenderAddExpenses(c *fiber.Ctx) error {
-	return c.Render("add-expenses.html", nil)
+	data := fiber.Map{
+		"ReloadRecentTx": c.Locals("ReloadRecentTx"),
+	}
+	return c.Render("add-expenses.html", data)
 }
 
 type addExpensesData struct {
@@ -41,6 +44,7 @@ func PostAddExpenses(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
+	c.Locals("ReloadRecentTx", true)
 	return RenderAddExpenses(c)
 }
 
