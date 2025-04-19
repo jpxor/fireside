@@ -1,6 +1,7 @@
 module fireside
 
 go 1.21.4
+toolchain go1.24.1
 
 require (
 	github.com/cockroachdb/apd v1.1.0
@@ -26,6 +27,6 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.51.0 // indirect
 	github.com/valyala/tcplisten v1.0.0 // indirect
-	golang.org/x/crypto v0.31.0
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/crypto v0.35.0
+	golang.org/x/sys v0.30.0 // indirect
 )
