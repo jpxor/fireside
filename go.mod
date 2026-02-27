@@ -6,7 +6,7 @@ toolchain go1.24.1
 
 require (
 	github.com/cockroachdb/apd v1.1.0
-	github.com/gofiber/fiber/v2 v2.52.9
+	github.com/gofiber/fiber/v2 v2.52.12
 	github.com/gofiber/template/html/v2 v2.0.5
 	github.com/rs/xid v1.5.0
 	github.com/shopspring/decimal v1.3.1
